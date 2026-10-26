@@ -44,6 +44,20 @@ model Supplier {
   updatedAt   DateTime @updatedAt
 }
 
+model Product {
+  id   String @id @default(cuid())
+  sku  String @unique
+  name String
+
+  category String
+  unit     String
+  /// Selling price in integer minor units (satang): 12500 = ฿125.00. Avoids floating-point drift.
+  sellingPriceMinor Int
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
