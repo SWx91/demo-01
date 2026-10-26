@@ -17,6 +17,10 @@ datasource db {
 enum Role {
   ADMIN
   STAFF
+  ADMINISTRATOR
+  PURCHASING_OFFICER
+  STORE_EMPLOYEE
+  MANAGER
 }
 
 model User {

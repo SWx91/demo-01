@@ -90,4 +90,14 @@ describe('AuthController', () => {
     await expect(call(controller.me(admin), undefined)).resolves.toEqual({ user: admin });
     await expect(call(controller.me(undefined), undefined)).resolves.toEqual({ user: null });
   });
+
+  it.each(['ADMINISTRATOR', 'PURCHASING_OFFICER', 'STORE_EMPLOYEE', 'MANAGER'] as const)(
+    'returns a user carrying the %s role',
+    async (role) => {
+      const controller = await createController();
+      const user: User = { ...admin, role };
+
+      await expect(call(controller.me(user), undefined)).resolves.toEqual({ user });
+    },
+  );
 });
