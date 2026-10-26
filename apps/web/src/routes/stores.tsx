@@ -1,4 +1,5 @@
 import type { CreateStoreInput } from '@erp/contracts';
+import { ORPCError } from '@orpc/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useCurrentUser } from '@/lib/auth';
 import { orpc } from '@/lib/orpc';
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 /** Administrator-only directory of stores, and the list conventions later lists reuse. */
 export function StoresPage() {
@@ -17,7 +18,9 @@ export function StoresPage() {
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
 
-  const stores = useQuery(orpc.stores.list.queryOptions({ input: { page, pageSize: PAGE_SIZE } }));
+  const stores = useQuery(
+    orpc.stores.list.queryOptions({ input: { page, pageSize: DEFAULT_PAGE_SIZE } }),
+  );
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: orpc.stores.list.key() });
 
@@ -110,10 +113,6 @@ function StoreForm({ onSaved }: { onSaved: () => void }) {
     }),
   );
 
-  const errorMessage = create.isError
-    ? messageFor(create.error, 'ไม่สามารถบันทึกสาขาได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่')
-    : null;
-
   return (
     <Card>
       <CardHeader>
@@ -146,9 +145,14 @@ function StoreForm({ onSaved }: { onSaved: () => void }) {
           <Button type="submit" disabled={create.isPending}>
             {create.isPending ? 'กำลังบันทึก…' : 'บันทึก'}
           </Button>
-          {errorMessage && (
+          {create.isSuccess && (
+            <p role="status" className="w-full text-sm text-muted-foreground">
+              บันทึกสาขาเรียบร้อยแล้ว
+            </p>
+          )}
+          {create.isError && (
             <p role="alert" className="w-full text-destructive">
-              {errorMessage}
+              {createErrorMessage(create.error)}
             </p>
           )}
         </form>
@@ -157,16 +161,11 @@ function StoreForm({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-/** A known, user-facing message. The server's CONFLICT message is Thai and safe to show; other
- * errors fall back to a generic Thai sentence so no stack trace or English detail leaks. */
-function messageFor(error: unknown, fallback: string): string {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    (error as { code?: string }).code === 'CONFLICT' &&
-    typeof (error as { message?: string }).message === 'string'
-  ) {
-    return (error as { message: string }).message;
-  }
-  return fallback;
+/**
+ * The server's CONFLICT message is Thai and safe to show; any other error falls back to a generic
+ * Thai sentence so no stack trace or English detail leaks. Uses the typed oRPC error, not ad-hoc casts.
+ */
+function createErrorMessage(error: Error): string {
+  if (error instanceof ORPCError && error.code === 'CONFLICT') return error.message;
+  return 'ไม่สามารถบันทึกสาขาได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่';
 }

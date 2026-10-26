@@ -1,9 +1,9 @@
 import { createBrowserRouter } from 'react-router';
 import { RequireAuth } from '@/components/require-auth';
-import { StoresPage } from '@/components/stores-page';
 import { HomePage } from '@/routes/home';
 import { LoginPage } from '@/routes/login';
 import { RootLayout } from '@/routes/root-layout';
+import { StoresPage } from '@/routes/stores';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },

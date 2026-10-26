@@ -1,9 +1,9 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClient } from '@/lib/query-client';
 import { mockApi } from '@/test/mock-api';
-import { StoresPage } from './stores-page';
+import { StoresPage } from './stores';
 
 const administrator = {
   id: '1',
@@ -23,6 +23,16 @@ function renderPage() {
 
 function storePage(items: { id: string; code: string; name: string }[]) {
   return { items, total: items.length, page: 1, pageSize: 20 };
+}
+
+function conflict(message: string) {
+  return Response.json({ defined: false, code: 'CONFLICT', status: 409, message }, { status: 409 });
+}
+
+async function addStore(code: string, name: string) {
+  fireEvent.change(await screen.findByLabelText('รหัสสาขา'), { target: { value: code } });
+  fireEvent.change(screen.getByLabelText('ชื่อสาขา'), { target: { value: name } });
+  fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
 }
 
 describe('StoresPage', () => {
@@ -68,5 +78,32 @@ describe('StoresPage', () => {
     const alert = await screen.findByRole('alert', {}, { timeout: 3000 });
     expect(alert).toHaveTextContent('ไม่สามารถโหลดรายการสาขาได้ กรุณาลองใหม่อีกครั้ง');
     expect(alert).not.toHaveTextContent('boom at line 42');
+  });
+
+  it('confirms success in Thai after an administrator adds a store', async () => {
+    mockApi({
+      'GET /auth/me': { user: administrator },
+      'GET /stores': storePage([]),
+      'POST /stores': { id: 's1', code: 'B01', name: 'Central Store' },
+    });
+
+    renderPage();
+    await addStore('B01', 'Central Store');
+
+    expect(await screen.findByRole('status')).toHaveTextContent('บันทึกสาขาเรียบร้อยแล้ว');
+  });
+
+  it('shows the Thai conflict message when the store code already exists', async () => {
+    mockApi({
+      'GET /auth/me': { user: administrator },
+      'GET /stores': storePage([]),
+      'POST /stores': conflict('รหัสสาขา "B01" มีอยู่แล้ว'),
+    });
+
+    renderPage();
+    await addStore('B01', 'Central Store');
+
+    const alert = await screen.findByRole('alert', {}, { timeout: 3000 });
+    expect(alert).toHaveTextContent('รหัสสาขา "B01" มีอยู่แล้ว');
   });
 });

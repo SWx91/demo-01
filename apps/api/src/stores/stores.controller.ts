@@ -7,11 +7,21 @@ import { PrismaService } from '../database/prisma.service.js';
 /** The fields the contract's StoreSchema exposes. */
 const STORE_SELECT = { id: true, code: true, name: true } as const;
 
-/** Prisma throws this when a @unique column (here, Store.code) collides. */
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === 'object' && error !== null && (error as { code?: string }).code === 'P2002'
-  );
+/**
+ * Prisma throws P2002 when a @unique column (here, Store.code) collides. Translate it into a
+ * Thai CONFLICT the client can show; re-throw anything else untouched.
+ */
+async function withDuplicateCodeGuard<T>(code: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    const isUniqueViolation =
+      typeof error === 'object' && error !== null && (error as { code?: string }).code === 'P2002';
+    if (isUniqueViolation) {
+      throw new ORPCError('CONFLICT', { message: `รหัสสาขา "${code}" มีอยู่แล้ว` });
+    }
+    throw error;
+  }
 }
 
 @Controller()
@@ -38,31 +48,21 @@ export class StoresController {
   @Roles('ADMINISTRATOR')
   @Implement(contract.stores.create)
   create() {
-    return implement(contract.stores.create).handler(async ({ input }) => {
-      try {
-        return await this.prisma.store.create({ data: input, select: STORE_SELECT });
-      } catch (error) {
-        if (isUniqueViolation(error)) {
-          throw new ORPCError('CONFLICT', { message: `รหัสสาขา "${input.code}" มีอยู่แล้ว` });
-        }
-        throw error;
-      }
-    });
+    return implement(contract.stores.create).handler(({ input }) =>
+      withDuplicateCodeGuard(input.code, () =>
+        this.prisma.store.create({ data: input, select: STORE_SELECT }),
+      ),
+    );
   }
 
   @Roles('ADMINISTRATOR')
   @Implement(contract.stores.update)
   update() {
-    return implement(contract.stores.update).handler(async ({ input }) => {
+    return implement(contract.stores.update).handler(({ input }) => {
       const { id, ...data } = input;
-      try {
-        return await this.prisma.store.update({ where: { id }, data, select: STORE_SELECT });
-      } catch (error) {
-        if (isUniqueViolation(error)) {
-          throw new ORPCError('CONFLICT', { message: `รหัสสาขา "${input.code}" มีอยู่แล้ว` });
-        }
-        throw error;
-      }
+      return withDuplicateCodeGuard(input.code, () =>
+        this.prisma.store.update({ where: { id }, data, select: STORE_SELECT }),
+      );
     });
   }
 }
