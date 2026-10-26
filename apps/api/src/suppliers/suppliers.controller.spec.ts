@@ -131,6 +131,34 @@ describe('SuppliersController', () => {
     });
   });
 
+  it('normalises blank contact fields to null, trimming the rest', async () => {
+    const create = vi
+      .fn()
+      .mockResolvedValue({ id: 'sup1', code: 'SUP01', name: 'SupplyOne Co Ltd' });
+    const controller = await createController({ create });
+
+    await call(controller.create(), {
+      code: 'SUP01',
+      name: 'SupplyOne Co Ltd',
+      contactName: '',
+      phone: '  02-123-4567  ',
+      email: '',
+      address: '   ',
+    });
+
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        code: 'SUP01',
+        name: 'SupplyOne Co Ltd',
+        contactName: null,
+        phone: '02-123-4567',
+        email: null,
+        address: null,
+      },
+      select: SELECT,
+    });
+  });
+
   it('rejects a duplicate code with a Thai CONFLICT', async () => {
     const create = vi
       .fn()

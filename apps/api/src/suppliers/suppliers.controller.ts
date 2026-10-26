@@ -23,13 +23,14 @@ type ContactInput = {
   address?: string;
 };
 
-/** Normalise optional contact fields to explicit null so create and edit are deterministic. */
+/** Normalise optional contact fields: a blank (already trimmed by the contract) becomes null. */
 function toContactData(input: ContactInput) {
+  const orNull = (value: string | undefined) => (value ? value : null);
   return {
-    contactName: input.contactName ?? null,
-    phone: input.phone ?? null,
-    email: input.email ? input.email : null,
-    address: input.address ?? null,
+    contactName: orNull(input.contactName),
+    phone: orNull(input.phone),
+    email: orNull(input.email),
+    address: orNull(input.address),
   };
 }
 

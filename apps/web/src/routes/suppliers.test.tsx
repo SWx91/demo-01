@@ -116,4 +116,34 @@ describe('SuppliersPage', () => {
     const alert = await screen.findByRole('alert', {}, { timeout: 3000 });
     expect(alert).toHaveTextContent('รหัสผู้จัดจำหน่าย "SUP01" มีอยู่แล้ว');
   });
+
+  it('lets an administrator edit a supplier, pre-filling the form and calling update', async () => {
+    const fetch = mockApi({
+      'GET /auth/me': { user: administrator },
+      'GET /suppliers': supplierPage([
+        { id: 'sup1', code: 'SUP01', name: 'SupplyOne Co Ltd', contactName: 'Somchai' },
+      ]),
+      'PUT /suppliers/sup1': {
+        id: 'sup1',
+        code: 'SUP01',
+        name: 'SupplyOne Renamed',
+        contactName: 'Somchai',
+      },
+    });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'แก้ไข' }));
+
+    const nameInput = screen.getByLabelText('ชื่อผู้จัดจำหน่าย') as HTMLInputElement;
+    expect(nameInput.value).toBe('SupplyOne Co Ltd');
+    fireEvent.change(nameInput, { target: { value: 'SupplyOne Renamed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('บันทึกผู้จัดจำหน่ายเรียบร้อยแล้ว');
+    const putCall = fetch.mock.calls.find(
+      ([request]) => request.method === 'PUT' && request.url.endsWith('/api/suppliers/sup1'),
+    );
+    expect(putCall).toBeDefined();
+  });
 });

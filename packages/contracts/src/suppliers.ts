@@ -22,7 +22,11 @@ export const CreateSupplierSchema = z.object({
   name: z.string().trim().min(1, 'กรุณากรอกชื่อผู้จัดจำหน่าย'),
   contactName: z.string().trim().optional(),
   phone: z.string().trim().optional(),
-  email: z.union([z.literal(''), z.email('กรุณากรอกอีเมลให้ถูกต้อง')]).optional(),
+  email: z
+    .string()
+    .trim()
+    .pipe(z.union([z.literal(''), z.email('กรุณากรอกอีเมลให้ถูกต้อง')]))
+    .optional(),
   address: z.string().trim().optional(),
 });
 export type CreateSupplierInput = z.infer<typeof CreateSupplierSchema>;

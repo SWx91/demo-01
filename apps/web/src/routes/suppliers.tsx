@@ -1,4 +1,4 @@
-import type { CreateSupplierInput } from '@erp/contracts';
+import type { CreateSupplierInput, Supplier } from '@erp/contracts';
 import { ORPCError } from '@orpc/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -16,6 +16,7 @@ export function SuppliersPage() {
   const user = useCurrentUser();
   const isAdmin = user?.role === 'ADMINISTRATOR';
   const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState<Supplier | null>(null);
   const queryClient = useQueryClient();
 
   const suppliers = useQuery(
@@ -28,7 +29,14 @@ export function SuppliersPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">ผู้จัดจำหน่าย</h1>
 
-      {isAdmin && <SupplierForm onSaved={invalidate} />}
+      {isAdmin && (
+        <SupplierForm
+          key={editing?.id ?? 'new'}
+          editing={editing}
+          onSaved={invalidate}
+          onCancel={() => setEditing(null)}
+        />
+      )}
 
       {suppliers.isPending ? (
         <p>กำลังโหลด…</p>
@@ -48,6 +56,7 @@ export function SuppliersPage() {
                 <th className="py-2">ผู้ติดต่อ</th>
                 <th className="py-2">โทรศัพท์</th>
                 <th className="py-2">อีเมล</th>
+                {isAdmin && <th className="py-2" />}
               </tr>
             </thead>
             <tbody>
@@ -58,6 +67,13 @@ export function SuppliersPage() {
                   <td className="py-2">{supplier.contactName ?? '—'}</td>
                   <td className="py-2">{supplier.phone ?? '—'}</td>
                   <td className="py-2">{supplier.email ?? '—'}</td>
+                  {isAdmin && (
+                    <td className="py-2 text-right">
+                      <Button variant="outline" size="sm" onClick={() => setEditing(supplier)}>
+                        แก้ไข
+                      </Button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -116,17 +132,37 @@ const EMPTY_FORM: CreateSupplierInput = {
   address: '',
 };
 
-function SupplierForm({ onSaved }: { onSaved: () => void }) {
-  const [form, setForm] = useState<CreateSupplierInput>(EMPTY_FORM);
-
-  const create = useMutation(
-    orpc.suppliers.create.mutationOptions({
-      onSuccess: () => {
-        setForm(EMPTY_FORM);
-        onSaved();
-      },
-    }),
+/** The create form, or the edit form when `editing` is set. Remount with a key to reset fields. */
+function SupplierForm({
+  editing,
+  onSaved,
+  onCancel,
+}: {
+  editing: Supplier | null;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState<CreateSupplierInput>(() =>
+    editing
+      ? {
+          code: editing.code,
+          name: editing.name,
+          contactName: editing.contactName ?? '',
+          phone: editing.phone ?? '',
+          email: editing.email ?? '',
+          address: editing.address ?? '',
+        }
+      : EMPTY_FORM,
   );
+
+  const onWriteSuccess = () => {
+    if (!editing) setForm(EMPTY_FORM);
+    onSaved();
+  };
+
+  const create = useMutation(orpc.suppliers.create.mutationOptions({ onSuccess: onWriteSuccess }));
+  const update = useMutation(orpc.suppliers.update.mutationOptions({ onSuccess: onWriteSuccess }));
+  const active = editing ? update : create;
 
   const field = (key: keyof CreateSupplierInput) => (event: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: event.target.value }));
@@ -134,14 +170,18 @@ function SupplierForm({ onSaved }: { onSaved: () => void }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>เพิ่มผู้จัดจำหน่าย</CardTitle>
+        <CardTitle>{editing ? 'แก้ไขผู้จัดจำหน่าย' : 'เพิ่มผู้จัดจำหน่าย'}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
           className="flex flex-wrap items-end gap-3"
           onSubmit={(event) => {
             event.preventDefault();
-            create.mutate(form);
+            if (editing) {
+              update.mutate({ ...form, id: editing.id });
+            } else {
+              create.mutate(form);
+            }
           }}
         >
           <div className="space-y-1">
@@ -172,17 +212,22 @@ function SupplierForm({ onSaved }: { onSaved: () => void }) {
             <Label htmlFor="supplier-address">ที่อยู่</Label>
             <Input id="supplier-address" value={form.address ?? ''} onChange={field('address')} />
           </div>
-          <Button type="submit" disabled={create.isPending}>
-            {create.isPending ? 'กำลังบันทึก…' : 'บันทึก'}
+          <Button type="submit" disabled={active.isPending}>
+            {active.isPending ? 'กำลังบันทึก…' : 'บันทึก'}
           </Button>
-          {create.isSuccess && (
+          {editing && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              ยกเลิก
+            </Button>
+          )}
+          {active.isSuccess && (
             <p role="status" className="w-full text-sm text-muted-foreground">
               บันทึกผู้จัดจำหน่ายเรียบร้อยแล้ว
             </p>
           )}
-          {create.isError && (
+          {active.isError && (
             <p role="alert" className="w-full text-destructive">
-              {createErrorMessage(create.error)}
+              {createErrorMessage(active.error)}
             </p>
           )}
         </form>
