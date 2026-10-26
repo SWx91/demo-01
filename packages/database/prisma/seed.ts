@@ -10,6 +10,18 @@ const stores = [
   { code: 'B02', name: 'Branch 02' },
 ];
 
+// Workshop suppliers. Re-running the seed keeps them stable by code.
+const suppliers = [
+  {
+    code: 'SUP01',
+    name: 'SupplyOne Co Ltd',
+    contactName: 'Somchai Jaidee',
+    phone: '02-123-4567',
+    email: 'sales@supplyone.co.th',
+    address: '123 Sukhumvit Rd, Bangkok 10110',
+  },
+];
+
 // Demo accounts for the workshop (also shown on the login page). Re-running the seed resets them.
 // Store employees are bound to a store; everyone else is unassigned. Store scope is derived
 // from this assignment, never from request input.
@@ -52,6 +64,15 @@ async function main() {
     storesByCode.set(saved.code, saved.id);
   }
 
+  for (const supplier of suppliers) {
+    const { code, ...rest } = supplier;
+    await prisma.supplier.upsert({
+      where: { code },
+      update: rest,
+      create: supplier,
+    });
+  }
+
   for (const user of demoUsers) {
     const storeId = user.storeCode ? (storesByCode.get(user.storeCode) ?? null) : null;
     await prisma.user.upsert({
@@ -67,7 +88,7 @@ async function main() {
     });
   }
   console.log(
-    `Seeded ${stores.length} stores and ${demoUsers.length} demo users (password: "${DEMO_PASSWORD}").`,
+    `Seeded ${stores.length} stores, ${suppliers.length} suppliers and ${demoUsers.length} demo users (password: "${DEMO_PASSWORD}").`,
   );
 }
 
