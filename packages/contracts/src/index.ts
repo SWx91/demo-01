@@ -16,6 +16,7 @@ export * from './stores.js';
 export const contract = {
   auth: authContract,
   health: healthContract,
+  stores: storesContract,
 };
 
 export type Contract = typeof contract;
