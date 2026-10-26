@@ -11,7 +11,14 @@ import { AuthController } from './auth.controller.js';
 import { SESSION_COOKIE, verifySessionToken } from './session-token.js';
 
 const secret = 'test-secret-that-is-at-least-32-characters';
-const admin: User = { id: 'u1', email: 'admin@erp.local', name: 'Admin User', role: 'ADMIN' };
+const admin: User = {
+  id: 'u1',
+  email: 'admin@erp.local',
+  name: 'Admin User',
+  role: 'ADMIN',
+  store: null,
+};
+const store = { id: 's1', code: 'B01', name: 'Branch 01' };
 
 async function createController(findUnique = vi.fn()) {
   const moduleRef = await Test.createTestingModule({
@@ -101,4 +108,11 @@ describe('AuthController', () => {
       await expect(call(controller.me(user), undefined)).resolves.toEqual({ user });
     },
   );
+
+  it('returns the assigned store for a store employee from identity alone', async () => {
+    const controller = await createController();
+    const user: User = { ...admin, email: 'staff_b01@erp.local', role: 'STORE_EMPLOYEE', store };
+
+    await expect(call(controller.me(user), undefined)).resolves.toEqual({ user });
+  });
 });
