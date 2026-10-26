@@ -60,9 +60,9 @@ describe('UpdateSupplierSchema', () => {
   });
 
   it('rejects an empty name', () => {
-    expect(
-      UpdateSupplierSchema.safeParse({ id: 'sup1', code: 'SUP01', name: '' }).success,
-    ).toBe(false);
+    expect(UpdateSupplierSchema.safeParse({ id: 'sup1', code: 'SUP01', name: '' }).success).toBe(
+      false,
+    );
   });
 });
 

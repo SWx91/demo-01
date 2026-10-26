@@ -111,7 +111,9 @@ describe('SuppliersController', () => {
   });
 
   it('creates a supplier with only a code and name', async () => {
-    const create = vi.fn().mockResolvedValue({ id: 'sup1', code: 'SUP01', name: 'SupplyOne Co Ltd' });
+    const create = vi
+      .fn()
+      .mockResolvedValue({ id: 'sup1', code: 'SUP01', name: 'SupplyOne Co Ltd' });
     const controller = await createController({ create });
 
     await call(controller.create(), { code: 'SUP01', name: 'SupplyOne Co Ltd' });
