@@ -22,35 +22,31 @@ describe('LoginInputSchema', () => {
 });
 
 describe('RoleSchema', () => {
-  it.each(['ADMIN', 'STAFF', 'ADMINISTRATOR', 'PURCHASING_OFFICER', 'STORE_EMPLOYEE', 'MANAGER'])(
-    'accepts the %s role',
-    (role) => {
-      const result = RoleSchema.safeParse(role);
+  it.each(RoleSchema.options)('accepts the %s role', (role) => {
+    const result = RoleSchema.safeParse(role);
 
-      expect(result.success).toBe(true);
-    },
-  );
+    expect(result.success).toBe(true);
+  });
 
   it('rejects an unknown role', () => {
     expect(RoleSchema.safeParse('OWNER').success).toBe(false);
   });
 });
 
+const NEW_ROLES = RoleSchema.options.filter((role) => role !== 'ADMIN' && role !== 'STAFF');
+
 describe('SessionSchema', () => {
   it('accepts a signed-out session', () => {
     expect(SessionSchema.safeParse({ user: null }).success).toBe(true);
   });
 
-  it.each(['ADMINISTRATOR', 'PURCHASING_OFFICER', 'STORE_EMPLOYEE', 'MANAGER'])(
-    'accepts a session for a user carrying the %s role',
-    (role) => {
-      const result = SessionSchema.safeParse({
-        user: { id: '1', email: 'a@erp.local', name: 'A', role },
-      });
+  it.each(NEW_ROLES)('accepts a session for a user carrying the %s role', (role) => {
+    const result = SessionSchema.safeParse({
+      user: { id: '1', email: 'a@erp.local', name: 'A', role },
+    });
 
-      expect(result.success).toBe(true);
-    },
-  );
+    expect(result.success).toBe(true);
+  });
 
   it('rejects an unknown role', () => {
     const result = SessionSchema.safeParse({

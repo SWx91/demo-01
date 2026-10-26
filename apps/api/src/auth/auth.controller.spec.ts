@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import type { User } from '@erp/contracts';
+import { RoleSchema } from '@erp/contracts';
 import { hashPassword } from '@erp/database';
 import { call } from '@orpc/server';
 import type { Response } from 'express';
@@ -91,7 +92,7 @@ describe('AuthController', () => {
     await expect(call(controller.me(undefined), undefined)).resolves.toEqual({ user: null });
   });
 
-  it.each(['ADMINISTRATOR', 'PURCHASING_OFFICER', 'STORE_EMPLOYEE', 'MANAGER'] as const)(
+  it.each(RoleSchema.options.filter((role) => role !== 'ADMIN' && role !== 'STAFF'))(
     'returns a user carrying the %s role',
     async (role) => {
       const controller = await createController();
