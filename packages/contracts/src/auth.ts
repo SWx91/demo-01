@@ -11,12 +11,22 @@ export const RoleSchema = z.enum([
 ]);
 export type Role = z.infer<typeof RoleSchema>;
 
+/** A store (branch) a user can be assigned to. */
+export const StoreSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+});
+export type Store = z.infer<typeof StoreSchema>;
+
 /** The signed-in user as the API exposes it (never includes the password hash). */
 export const UserSchema = z.object({
   id: z.string(),
   email: z.email(),
   name: z.string(),
   role: RoleSchema,
+  /** The store this user is assigned to, derived from identity. Null when unassigned. */
+  store: StoreSchema.nullable().default(null),
 });
 export type User = z.infer<typeof UserSchema>;
 
