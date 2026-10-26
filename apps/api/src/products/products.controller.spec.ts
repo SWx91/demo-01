@@ -21,6 +21,16 @@ const input = {
   active: true,
 };
 
+const PRODUCT_SELECT = {
+  id: true,
+  sku: true,
+  name: true,
+  category: true,
+  unit: true,
+  sellingPriceMinor: true,
+  active: true,
+};
+
 describe('ProductsController', () => {
   it('creates a product, passing the input through to Prisma', async () => {
     const created = { id: 'prod1', ...input };
@@ -28,7 +38,16 @@ describe('ProductsController', () => {
     const controller = await createController({ create });
 
     await expect(call(controller.create(), input)).resolves.toEqual(created);
-    expect(create).toHaveBeenCalledWith({ data: input });
+    expect(create).toHaveBeenCalledWith({ data: input, select: PRODUCT_SELECT });
+  });
+
+  it('rejects a duplicate SKU with a Thai CONFLICT', async () => {
+    const create = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
+    const controller = await createController({ create });
+
+    await expect(call(controller.create(), input)).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
   it('preserves the selling price exactly as integer minor units through the contract call', async () => {

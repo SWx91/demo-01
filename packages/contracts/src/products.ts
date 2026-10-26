@@ -2,8 +2,9 @@ import { oc } from '@orpc/contract';
 import * as z from 'zod';
 
 /**
- * A quantity of stock. Quantities are whole units — fractional amounts are refused at the
- * contract boundary. Reused by later inventory tickets (reorder thresholds, stock levels).
+ * A quantity of stock, in whole units. Fractional amounts are refused at the contract boundary —
+ * this is the MD-02 "whole-number quantities" rule. The per-store reorder threshold and stock
+ * levels that consume this schema arrive in later inventory tickets.
  */
 export const QuantitySchema = z.int('กรุณากรอกจำนวนเป็นจำนวนเต็ม').min(0, 'จำนวนต้องไม่ติดลบ');
 export type Quantity = z.infer<typeof QuantitySchema>;
@@ -42,12 +43,6 @@ export const CreateProductSchema = z.object({
   active: z.boolean().default(true),
 });
 export type CreateProductInput = z.infer<typeof CreateProductSchema>;
-
-/** Editing a product: the id plus the same fields. */
-export const UpdateProductSchema = CreateProductSchema.extend({
-  id: z.string().min(1),
-});
-export type UpdateProductInput = z.infer<typeof UpdateProductSchema>;
 
 export const productsContract = {
   create: oc
