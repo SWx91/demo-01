@@ -53,9 +53,9 @@ describe('StoresController', () => {
     const create = vi.fn().mockResolvedValue(created);
     const controller = await createController({ create });
 
-    await expect(call(controller.create(), { code: 'B01', name: 'Central Store' })).resolves.toEqual(
-      created,
-    );
+    await expect(
+      call(controller.create(), { code: 'B01', name: 'Central Store' }),
+    ).resolves.toEqual(created);
     expect(create).toHaveBeenCalledWith({
       data: { code: 'B01', name: 'Central Store' },
       select: { id: true, code: true, name: true },
@@ -63,9 +63,9 @@ describe('StoresController', () => {
   });
 
   it('rejects a duplicate code with a Thai message', async () => {
-    const create = vi.fn().mockRejectedValue(
-      Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }),
-    );
+    const create = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
     const controller = await createController({ create });
 
     await expect(

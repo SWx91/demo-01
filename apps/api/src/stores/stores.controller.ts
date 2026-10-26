@@ -9,7 +9,9 @@ const STORE_SELECT = { id: true, code: true, name: true } as const;
 
 /** Prisma throws this when a @unique column (here, Store.code) collides. */
 function isUniqueViolation(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && (error as { code?: string }).code === 'P2002';
+  return (
+    typeof error === 'object' && error !== null && (error as { code?: string }).code === 'P2002'
+  );
 }
 
 @Controller()
