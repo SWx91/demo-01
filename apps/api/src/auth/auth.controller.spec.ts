@@ -18,7 +18,6 @@ const admin: User = {
   role: 'ADMIN',
   store: null,
 };
-const store = { id: 's1', code: 'B01', name: 'Branch 01' };
 
 async function createController(findUnique = vi.fn()) {
   const moduleRef = await Test.createTestingModule({
@@ -109,10 +108,16 @@ describe('AuthController', () => {
     },
   );
 
-  it('returns the assigned store for a store employee from identity alone', async () => {
-    const controller = await createController();
-    const user: User = { ...admin, email: 'staff_b01@erp.local', role: 'STORE_EMPLOYEE', store };
+  it.each([
+    { email: 'staff_b01@erp.local', store: { id: 's1', code: 'B01', name: 'Branch 01' } },
+    { email: 'staff_b02@erp.local', store: { id: 's2', code: 'B02', name: 'Branch 02' } },
+  ])(
+    'returns the assigned store ($store.code) for a store employee from identity alone',
+    async ({ email, store: assigned }) => {
+      const controller = await createController();
+      const user: User = { ...admin, email, role: 'STORE_EMPLOYEE', store: assigned };
 
-    await expect(call(controller.me(user), undefined)).resolves.toEqual({ user });
-  });
+      await expect(call(controller.me(user), undefined)).resolves.toEqual({ user });
+    },
+  );
 });
