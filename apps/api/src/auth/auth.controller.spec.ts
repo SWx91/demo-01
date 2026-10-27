@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import type { User } from '@erp/contracts';
+import { RoleSchema } from '@erp/contracts';
 import { hashPassword } from '@erp/database';
 import { call } from '@orpc/server';
 import type { Response } from 'express';
@@ -10,7 +11,13 @@ import { AuthController } from './auth.controller.js';
 import { SESSION_COOKIE, verifySessionToken } from './session-token.js';
 
 const secret = 'test-secret-that-is-at-least-32-characters';
-const admin: User = { id: 'u1', email: 'admin@erp.local', name: 'Admin User', role: 'ADMIN' };
+const admin: User = {
+  id: 'u1',
+  email: 'admin@erp.local',
+  name: 'Admin User',
+  role: 'ADMIN',
+  store: null,
+};
 
 async function createController(findUnique = vi.fn()) {
   const moduleRef = await Test.createTestingModule({
@@ -90,4 +97,27 @@ describe('AuthController', () => {
     await expect(call(controller.me(admin), undefined)).resolves.toEqual({ user: admin });
     await expect(call(controller.me(undefined), undefined)).resolves.toEqual({ user: null });
   });
+
+  it.each(RoleSchema.options.filter((role) => role !== 'ADMIN' && role !== 'STAFF'))(
+    'returns a user carrying the %s role',
+    async (role) => {
+      const controller = await createController();
+      const user: User = { ...admin, role };
+
+      await expect(call(controller.me(user), undefined)).resolves.toEqual({ user });
+    },
+  );
+
+  it.each([
+    { email: 'staff_b01@erp.local', store: { id: 's1', code: 'B01', name: 'Branch 01' } },
+    { email: 'staff_b02@erp.local', store: { id: 's2', code: 'B02', name: 'Branch 02' } },
+  ])(
+    'returns the assigned store ($store.code) for a store employee from identity alone',
+    async ({ email, store: assigned }) => {
+      const controller = await createController();
+      const user: User = { ...admin, email, role: 'STORE_EMPLOYEE', store: assigned };
+
+      await expect(call(controller.me(user), undefined)).resolves.toEqual({ user });
+    },
+  );
 });

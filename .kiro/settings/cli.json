@@ -1,4 +1,6 @@
 {
   "chat.defaultAgent": "erp",
-  "chat.enableKnowledge": false
+  "chat.disableInheritingDefaultResources": false,
+  "chat.enableKnowledge": false,
+  "chat.enableWorkflows": false
 }

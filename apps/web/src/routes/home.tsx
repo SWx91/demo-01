@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { HealthStatus } from '@/components/health-status';
 
 export function HomePage() {
@@ -9,6 +10,11 @@ export function HomePage() {
           The stack is up. We will build the ERP features together in the workshop.
         </p>
       </div>
+      <nav>
+        <Link to="/stores" className="text-primary underline">
+          จัดการสาขา
+        </Link>
+      </nav>
       <HealthStatus />
     </div>
   );

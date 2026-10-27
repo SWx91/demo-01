@@ -2,7 +2,7 @@
   "name": "erp",
   "description": "Coding agent for this ERP repository: repo instructions and skills only, built-in tools only.",
   "tools": ["@builtin"],
-  "excludedTools": ["knowledge"],
+  "excludedTools": ["knowledge", "kiro_powers", "createHook"],
   "includeMcpJson": false,
   "includePowers": false,
   "resources": ["skill://.kiro/skills/*/SKILL.md"],
