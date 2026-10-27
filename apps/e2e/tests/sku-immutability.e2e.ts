@@ -53,15 +53,20 @@ test.describe('product SKU immutability', () => {
     });
     expect(movement.ok(), `opening movement returned ${movement.status()}`).toBeTruthy();
 
+    // Scope assertions to the edit form: the create form above is still on screen with its own
+    // role="status"/role="alert" success message from the product just created, so an unscoped
+    // page.getByRole('status') would match two elements (strict-mode violation on CI).
+    const editForm = page.locator('form').filter({ hasText: 'แก้ไขรหัสสินค้า (SKU)' });
+
     // Editing its SKU is rejected (AC2), with a Thai, actionable error.
     await page.getByLabel('แก้ไขรหัสสินค้า (SKU)').fill(`${sku}-CHANGED`);
     await page.getByRole('button', { name: 'บันทึกการแก้ไข' }).click();
-    await expect(page.getByRole('alert')).toContainText('ไม่สามารถเปลี่ยนรหัสสินค้า');
+    await expect(editForm.getByRole('alert')).toContainText('ไม่สามารถเปลี่ยนรหัสสินค้า');
 
     // Editing its name still works (AC3): put the SKU back, change the name, and save.
     await page.getByLabel('แก้ไขรหัสสินค้า (SKU)').fill(sku);
     await page.getByLabel('แก้ไขชื่อสินค้า').fill('E2E Immutability Product (renamed)');
     await page.getByRole('button', { name: 'บันทึกการแก้ไข' }).click();
-    await expect(page.getByRole('status')).toContainText('บันทึกสินค้าเรียบร้อยแล้ว');
+    await expect(editForm.getByRole('status')).toContainText('บันทึกสินค้าเรียบร้อยแล้ว');
   });
 });

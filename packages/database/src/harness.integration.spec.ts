@@ -25,6 +25,8 @@ describe('Postgres integration harness', () => {
         balanceAfter: 8,
         movementType: 'ADJUSTMENT',
         sourceDocument: 'SETUP',
+        productNameSnapshot: 'Integration Product',
+        sellingPriceMinorSnapshot: 100,
       },
     });
 

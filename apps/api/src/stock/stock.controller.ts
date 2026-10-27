@@ -15,6 +15,22 @@ const STOCK_BALANCE_SELECT = {
   quantity: true,
 } as const;
 
+/** The fields the contract's StockMovementSchema exposes, including the historical snapshot. */
+const STOCK_MOVEMENT_SELECT = {
+  id: true,
+  storeId: true,
+  productId: true,
+  quantityChange: true,
+  balanceBefore: true,
+  balanceAfter: true,
+  movementType: true,
+  sourceDocument: true,
+  productNameSnapshot: true,
+  sellingPriceMinorSnapshot: true,
+  actorId: true,
+  createdAt: true,
+} as const;
+
 /** The Postgres error code of the StockBalance non-negative CHECK constraint failing. */
 const CHECK_VIOLATION = '23514';
 /** The Postgres error code of a serialization failure under Serializable isolation. */
@@ -82,6 +98,20 @@ export class StockController {
       this.prisma.stockBalance.findMany({
         where: { storeId: input.storeId },
         select: STOCK_BALANCE_SELECT,
+      }),
+    );
+  }
+
+  // A historical search of one product's movements in one store (AC3). Every row already carries
+  // the snapshot postStockMovement wrote at posting time, so this is a plain read: no edit to the
+  // product since can reach back and change what an existing movement shows.
+  @Implement(contract.stock.listMovements)
+  listMovements() {
+    return implement(contract.stock.listMovements).handler(({ input }) =>
+      this.prisma.stockMovement.findMany({
+        where: { storeId: input.storeId, productId: input.productId },
+        orderBy: { createdAt: 'asc' },
+        select: STOCK_MOVEMENT_SELECT,
       }),
     );
   }

@@ -1,5 +1,6 @@
 import { oc } from '@orpc/contract';
 import * as z from 'zod';
+import { SellingPriceMinorSchema } from './products.js';
 
 /**
  * Why a stock balance ever changed. Every stock movement carries one. RECEIPT raises a balance
@@ -19,6 +20,10 @@ export const StockQuantitySchema = z
  * signed quantity change, the balance before and after, why it changed, the source document that
  * drove it, who posted it, and when. Once written it is never edited or deleted — the contract
  * exposes no route to do so.
+ *
+ * `productNameSnapshot` and `sellingPriceMinorSnapshot` are the product's name and selling price
+ * as they were at the moment this movement was posted (the shared historical-fidelity rule, TOR
+ * 4.3): a later edit to the product's name or price never changes what an existing movement shows.
  */
 export const StockMovementSchema = z.object({
   id: z.string(),
@@ -29,6 +34,8 @@ export const StockMovementSchema = z.object({
   balanceAfter: StockQuantitySchema,
   movementType: MovementTypeSchema,
   sourceDocument: z.string(),
+  productNameSnapshot: z.string(),
+  sellingPriceMinorSnapshot: SellingPriceMinorSchema,
   actorId: z.string(),
   // The handler returns a Date (Prisma); over the wire it is an ISO string. Accept either and
   // normalise to an ISO string so the same schema validates the handler return and the response.
@@ -73,6 +80,16 @@ export const ListStockBalancesSchema = z.object({
 export type ListStockBalancesInput = z.infer<typeof ListStockBalancesSchema>;
 
 /**
+ * A historical search of one product's movements in one store (AC3): every movement still shows
+ * the product details it recorded at the time, regardless of any edit made to the product since.
+ */
+export const ListStockMovementsSchema = z.object({
+  storeId: z.string().min(1, 'กรุณาเลือกสาขา'),
+  productId: z.string().min(1, 'กรุณาเลือกสินค้า'),
+});
+export type ListStockMovementsInput = z.infer<typeof ListStockMovementsSchema>;
+
+/**
  * A Manager increasing or decreasing stock with a mandatory reason (INV-05). `reason` is the
  * adjustment's source document — a manual correction has no separate paper document, so the
  * reason the manager gives fills that role on the resulting movement. The movement type is fixed
@@ -109,6 +126,16 @@ export const stockContract = {
     })
     .input(ListStockBalancesSchema)
     .output(z.array(StockBalanceSchema)),
+  listMovements: oc
+    .route({
+      method: 'GET',
+      path: '/stock/movements',
+      summary:
+        "Historical search of a product's stock movements in a store (each shows the product details it recorded, unaffected by later edits)",
+      tags: ['Stock'],
+    })
+    .input(ListStockMovementsSchema)
+    .output(z.array(StockMovementSchema)),
   adjust: oc
     .route({
       method: 'POST',
