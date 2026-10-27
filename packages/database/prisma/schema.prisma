@@ -24,12 +24,13 @@ enum Role {
 }
 
 model Store {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  name      String
-  users     User[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String         @id @default(cuid())
+  code          String         @unique
+  name          String
+  users         User[]
+  storeProducts StoreProduct[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model Supplier {
@@ -56,6 +57,25 @@ model Product {
   active            Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  storeProducts StoreProduct[]
+}
+
+/// A store-scoped row for a product. Carries the per-store reorder threshold (MD-01) and is the
+/// row later stock balances attach to. Unique per (store, product) so a product can hold a
+/// different threshold in each store.
+model StoreProduct {
+  id               String   @id @default(cuid())
+  storeId          String
+  store            Store    @relation(fields: [storeId], references: [id])
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id])
+  /// The reorder threshold for this product in this store. Non-negative (MD-02), whole units.
+  reorderThreshold Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([storeId, productId])
 }
 
 model User {
