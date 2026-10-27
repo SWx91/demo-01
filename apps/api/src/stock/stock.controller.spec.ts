@@ -13,6 +13,7 @@ const actor: User = {
   email: 'staff_b01@erp.local',
   name: 'Store Employee B01',
   role: 'STORE_EMPLOYEE',
+  store: { id: 'store-b01', code: 'B01', name: 'Branch 01' },
 };
 
 async function createController(prisma: Record<string, unknown>) {

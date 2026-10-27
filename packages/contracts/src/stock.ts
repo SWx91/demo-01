@@ -32,9 +32,9 @@ export const StockMovementSchema = z.object({
   actorId: z.string(),
   // The handler returns a Date (Prisma); over the wire it is an ISO string. Accept either and
   // normalise to an ISO string so the same schema validates the handler return and the response.
-  createdAt: z.union([z.date(), z.iso.datetime()]).transform((value) =>
-    value instanceof Date ? value.toISOString() : value,
-  ),
+  createdAt: z
+    .union([z.date(), z.iso.datetime()])
+    .transform((value) => (value instanceof Date ? value.toISOString() : value)),
 });
 export type StockMovement = z.infer<typeof StockMovementSchema>;
 
