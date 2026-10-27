@@ -56,4 +56,14 @@ describe('summarizeLatencies', () => {
   it('exposes the NFR-05 budget as 2 seconds', () => {
     expect(NFR05_P95_BUDGET_MS).toBe(2_000);
   });
+
+  it('summarizes a very large sample without overflowing the stack', () => {
+    // A 5-minute, 10-user run produces hundreds of thousands of samples. Math.min(...samples)
+    // overflows the call stack at that size; summarize must handle it.
+    const samples = Array.from({ length: 500_000 }, (_, i) => (i % 1_000) + 1);
+    const summary = summarizeLatencies(samples);
+    expect(summary.count).toBe(500_000);
+    expect(summary.minMs).toBe(1);
+    expect(summary.maxMs).toBe(1_000);
+  });
 });

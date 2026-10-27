@@ -41,11 +41,19 @@ export function summarizeLatencies(samples: readonly number[]): LatencySummary {
     throw new Error('summarizeLatencies requires at least one sample');
   }
   const total = samples.reduce((sum, ms) => sum + ms, 0);
+  // Reduce rather than Math.min(...samples)/Math.max(...samples): a 5-minute run produces hundreds
+  // of thousands of samples, and spreading that many arguments overflows the call stack.
+  let minMs = samples[0]!;
+  let maxMs = samples[0]!;
+  for (const value of samples) {
+    if (value < minMs) minMs = value;
+    if (value > maxMs) maxMs = value;
+  }
   const p95Ms = percentile(samples, 95);
   return {
     count: samples.length,
-    minMs: Math.min(...samples),
-    maxMs: Math.max(...samples),
+    minMs,
+    maxMs,
     meanMs: total / samples.length,
     p95Ms,
     withinBudget: p95Ms <= NFR05_P95_BUDGET_MS,
