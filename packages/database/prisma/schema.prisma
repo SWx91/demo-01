@@ -130,20 +130,29 @@ model StockBalance {
 /// signed quantity change, the balance before and after, why it changed, the source document that
 /// drove it, who posted it, and when. It has no `updatedAt`: once written it is never edited or
 /// deleted. Every stock change in the product goes through this model.
+///
+/// `productNameSnapshot` and `sellingPriceMinorSnapshot` are the product's name and selling price
+/// at the moment this movement was recorded (the shared "historical fidelity" rule in TOR 4.3:
+/// changes to master data must never alter the names, prices, or details already recorded in
+/// historical documents). They are written once, at posting time, from the live `Product` row and
+/// never updated afterwards, so a later edit to the product's name or price leaves every existing
+/// movement showing exactly what it recorded then.
 model StockMovement {
-  id             String       @id @default(cuid())
-  storeId        String
-  store          Store        @relation(fields: [storeId], references: [id])
-  productId      String
-  product        Product      @relation(fields: [productId], references: [id])
-  quantityChange Int
-  balanceBefore  Int
-  balanceAfter   Int
-  movementType   MovementType
-  sourceDocument String
-  actorId        String
-  actor          User         @relation(fields: [actorId], references: [id])
-  createdAt      DateTime     @default(now())
+  id                        String       @id @default(cuid())
+  storeId                   String
+  store                     Store        @relation(fields: [storeId], references: [id])
+  productId                 String
+  product                   Product      @relation(fields: [productId], references: [id])
+  quantityChange            Int
+  balanceBefore             Int
+  balanceAfter              Int
+  movementType              MovementType
+  sourceDocument            String
+  productNameSnapshot       String
+  sellingPriceMinorSnapshot Int
+  actorId                   String
+  actor                     User         @relation(fields: [actorId], references: [id])
+  createdAt                 DateTime     @default(now())
 
   @@index([storeId, productId])
 }

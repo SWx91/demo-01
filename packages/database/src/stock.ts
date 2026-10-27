@@ -15,7 +15,7 @@ export interface PostStockMovementInput {
 }
 
 /** A Prisma client or an interactive transaction client — the function works through either. */
-type PrismaLike = Pick<PrismaClient, '$transaction' | 'stockBalance' | 'stockMovement'>;
+type PrismaLike = Pick<PrismaClient, '$transaction' | 'stockBalance' | 'stockMovement' | 'product'>;
 
 /**
  * The single mechanism every stock change in the product goes through. In one database
@@ -39,6 +39,15 @@ export async function postStockMovement(
 
       const balanceBefore = current?.quantity ?? 0;
       const balanceAfter = balanceBefore + quantityChange;
+
+      // The historical-fidelity shared rule (TOR 4.3): a movement captures the product's name and
+      // price as they are right now, inside this same transaction, so the snapshot is consistent
+      // with everything else this posting commits. A later edit to the product never touches this
+      // row again.
+      const product = await tx.product.findUniqueOrThrow({
+        where: { id: productId },
+        select: { name: true, sellingPriceMinor: true },
+      });
 
       if (current) {
         // Guarded conditional update: only touch the row if its version is still the one we read.
@@ -70,6 +79,8 @@ export async function postStockMovement(
           movementType,
           sourceDocument,
           actorId,
+          productNameSnapshot: product.name,
+          sellingPriceMinorSnapshot: product.sellingPriceMinor,
         },
       });
     },

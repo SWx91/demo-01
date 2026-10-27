@@ -244,6 +244,58 @@ describe('manager stock adjustment and its audit entry on a real Postgres', () =
   });
 });
 
+// Historical snapshot fidelity (ticket #19, TOR 4.3 shared rule): a movement captures the
+// product's name and price as they were when it was posted, and no later edit to the product can
+// reach back and change what an already-recorded movement shows. Proven on a real Postgres
+// because the guarantee that matters is that the row on disk never changes underneath the edit,
+// not just that the in-memory return value looked right.
+describe('historical snapshot fidelity on a real Postgres (ticket #19)', () => {
+  it('captures the product name and price at posting time (AC1)', async () => {
+    const { storeId, productId, actorId } = scenario;
+    const product = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+
+    const movement = await postStockMovement(prisma, {
+      storeId,
+      productId,
+      quantityChange: 5,
+      movementType: 'RECEIPT',
+      sourceDocument: 'PO-SNAP-1',
+      actorId,
+    });
+
+    expect(movement.productNameSnapshot).toBe(product.name);
+    expect(movement.sellingPriceMinorSnapshot).toBe(product.sellingPriceMinor);
+  });
+
+  it("editing the product's name or price afterwards does not alter what an existing movement recorded (AC2)", async () => {
+    const { storeId, productId, actorId } = scenario;
+    const product = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+
+    const movement = await postStockMovement(prisma, {
+      storeId,
+      productId,
+      quantityChange: 5,
+      movementType: 'RECEIPT',
+      sourceDocument: 'PO-SNAP-2',
+      actorId,
+    });
+
+    // Change SKU001's selling price (the Demo line) and its name.
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        name: 'Renamed After The Fact',
+        sellingPriceMinor: product.sellingPriceMinor + 500,
+      },
+    });
+
+    // The existing movement still shows the details it recorded at the time, not the edit.
+    const persisted = await prisma.stockMovement.findUniqueOrThrow({ where: { id: movement.id } });
+    expect(persisted.productNameSnapshot).toBe(product.name);
+    expect(persisted.sellingPriceMinorSnapshot).toBe(product.sellingPriceMinor);
+  });
+});
+
 // Proves the reset makes scenarios order-independent: a scenario that deliberately leaves the
 // database dirty must not change the outcome of the scenario that runs after it. The `beforeEach`
 // reset is the only thing standing between them, so if it works this count is exactly 1.
