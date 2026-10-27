@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { OpenApiModule } from './openapi/openapi.module.js';
 import { ProductsModule } from './products/products.module.js';
+import { StockModule } from './stock/stock.module.js';
 import { StoreProductsModule } from './store-products/store-products.module.js';
 import { StoresModule } from './stores/stores.module.js';
 import { SuppliersModule } from './suppliers/suppliers.module.js';
@@ -27,6 +28,7 @@ import { SuppliersModule } from './suppliers/suppliers.module.js';
     StoreProductsModule,
     SuppliersModule,
     ProductsModule,
+    StockModule,
     OpenApiModule,
   ],
 })

@@ -24,6 +24,24 @@ describe('StockMovementSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts a Date createdAt from the handler and normalises it to an ISO string', () => {
+    const result = StockMovementSchema.safeParse({
+      id: 'mv1',
+      storeId: 'store-b01',
+      productId: 'prod1',
+      quantityChange: 8,
+      balanceBefore: 10,
+      balanceAfter: 18,
+      movementType: 'RECEIPT',
+      sourceDocument: 'PO-DEMO-001',
+      actorId: 'user1',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.createdAt).toBe('2026-01-01T00:00:00.000Z');
+  });
+
   it('rejects a fractional quantity change', () => {
     const result = StockMovementSchema.safeParse({
       id: 'mv1',
