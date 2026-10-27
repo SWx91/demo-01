@@ -2,7 +2,7 @@
   "name": "implementer",
   "description": "Headless implementer for one ticket in this ERP repository. Follows the implement-ticket skill with the seams taken from the ticket, commits, pushes and opens a pull request. Never merges, never closes or edits a ticket, never edits the agent, prompt, guard, skill or workflow files it runs under.",
   "prompt": "file://implementer.md",
-  "model": "claude-sonnet-5.5",
+  "model": "claude-sonnet-5",
   "tools": ["@builtin"],
   "excludedTools": ["knowledge"],
   "includeMcpJson": false,
