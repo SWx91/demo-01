@@ -38,7 +38,7 @@ export const prisma: PrismaClient = createPrismaClient(
  */
 export async function resetStockData(): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "StockMovement", "StockBalance", "StoreProduct", "Product", "Store", "User" RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE "AuditLog", "StockMovement", "StockBalance", "StoreProduct", "Product", "Store", "User" RESTART IDENTITY CASCADE',
   );
 }
 

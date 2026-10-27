@@ -72,6 +72,24 @@ export const ListStockBalancesSchema = z.object({
 });
 export type ListStockBalancesInput = z.infer<typeof ListStockBalancesSchema>;
 
+/**
+ * A Manager increasing or decreasing stock with a mandatory reason (INV-05). `reason` is the
+ * adjustment's source document — a manual correction has no separate paper document, so the
+ * reason the manager gives fills that role on the resulting movement. The movement type is fixed
+ * to ADJUSTMENT server-side (not part of this input), so a caller cannot post a different kind of
+ * movement through this route. A reduction greater than the available balance is rejected by the
+ * same posting mechanism every movement goes through.
+ */
+export const AdjustStockSchema = z.object({
+  storeId: z.string().min(1, 'กรุณาเลือกสาขา'),
+  productId: z.string().min(1, 'กรุณาเลือกสินค้า'),
+  quantityChange: z
+    .int('ส่วนเปลี่ยนแปลงต้องเป็นจำนวนเต็ม')
+    .refine((value) => value !== 0, 'การปรับสต็อกต้องเปลี่ยนแปลงจำนวนคงเหลือ'),
+  reason: z.string().min(1, 'กรุณาระบุเหตุผล'),
+});
+export type AdjustStockInput = z.infer<typeof AdjustStockSchema>;
+
 export const stockContract = {
   post: oc
     .route({
@@ -91,4 +109,13 @@ export const stockContract = {
     })
     .input(ListStockBalancesSchema)
     .output(z.array(StockBalanceSchema)),
+  adjust: oc
+    .route({
+      method: 'POST',
+      path: '/stock/adjustments',
+      summary: 'Manager stock adjustment with a mandatory reason (increase or decrease)',
+      tags: ['Stock'],
+    })
+    .input(AdjustStockSchema)
+    .output(StockMovementSchema),
 };

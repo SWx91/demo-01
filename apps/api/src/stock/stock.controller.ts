@@ -1,9 +1,12 @@
 import { Controller } from '@nestjs/common';
 import { contract, type User } from '@erp/contracts';
-import { postStockMovement } from '@erp/database';
+import { postStockMovement, recordAudit } from '@erp/database';
 import { Implement, implement, ORPCError } from '@orpc/nest';
 import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { PrismaService } from '../database/prisma.service.js';
+
+/** The audit `action` recorded for every manager stock adjustment (NFR-03). */
+const ADJUSTMENT_AUDIT_ACTION = 'STOCK_ADJUSTMENT';
 
 /** The fields the contract's StockBalanceSchema exposes. */
 const STOCK_BALANCE_SELECT = {
@@ -81,5 +84,48 @@ export class StockController {
         select: STOCK_BALANCE_SELECT,
       }),
     );
+  }
+
+  // A Manager adjustment is a distinct route from the general post above: it is restricted to
+  // Managers only (INV-05; a store employee or administrator is refused, not just any non-manager
+  // such as a purchasing officer), the reason is mandatory (enforced by the contract), and every
+  // attempt — successful or rejected — leaves an audit entry (NFR-03), independent of whatever
+  // happened to the stock-posting transaction itself.
+  @Roles('MANAGER')
+  @Implement(contract.stock.adjust)
+  adjust(@CurrentUser() user: User) {
+    return implement(contract.stock.adjust).handler(async ({ input }) => {
+      const { storeId, productId, quantityChange, reason } = input;
+      try {
+        // The reason is the adjustment's source document: a manual correction has no separate
+        // paper document, so the reason given fills that role on the resulting movement.
+        const movement = await postStockMovement(this.prisma, {
+          storeId,
+          productId,
+          quantityChange,
+          movementType: 'ADJUSTMENT',
+          sourceDocument: reason,
+          actorId: user.id,
+        });
+        await recordAudit(this.prisma, {
+          actorId: user.id,
+          action: ADJUSTMENT_AUDIT_ACTION,
+          sourceDocument: reason,
+          outcome: 'SUCCESS',
+        });
+        return movement;
+      } catch (error) {
+        // The posting rolled back (e.g. a reduction greater than the available balance), so no
+        // movement exists to audit. The attempt is still audited, in its own write, so the
+        // rejection is never silently lost.
+        await recordAudit(this.prisma, {
+          actorId: user.id,
+          action: ADJUSTMENT_AUDIT_ACTION,
+          sourceDocument: reason,
+          outcome: 'REJECTED',
+        });
+        throw toPostingError(error);
+      }
+    });
   }
 }

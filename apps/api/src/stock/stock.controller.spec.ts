@@ -17,6 +17,14 @@ const actor: User = {
   store: { id: 'store-b01', code: 'B01', name: 'Branch 01' },
 };
 
+const manager: User = {
+  id: 'user-manager',
+  email: 'manager01@erp.local',
+  name: 'Manager',
+  role: 'MANAGER',
+  store: null,
+};
+
 async function createController(prisma: Record<string, unknown>) {
   const moduleRef = await Test.createTestingModule({
     controllers: [StockController],
@@ -187,5 +195,108 @@ describe('StockController', () => {
       'MANAGER',
       'ADMINISTRATOR',
     ]);
+  });
+
+  it('adjusts stock with a reason, writing an ADJUSTMENT movement and a SUCCESS audit entry (AC1, NFR-03)', async () => {
+    const movement = {
+      id: 'mv-adj1',
+      storeId: 'store-b01',
+      productId: 'prod1',
+      quantityChange: 5,
+      balanceBefore: 5,
+      balanceAfter: 10,
+      movementType: 'ADJUSTMENT',
+      sourceDocument: 'ตรวจนับสต็อกพบส่วนต่าง',
+      actorId: 'user-manager',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    const post = vi.spyOn(database, 'postStockMovement').mockResolvedValue(movement as never);
+    const auditLog = { id: 'audit1' };
+    const recordAudit = vi.spyOn(database, 'recordAudit').mockResolvedValue(auditLog as never);
+    const controller = await createController({});
+
+    const result = await call(
+      controller.adjust(manager),
+      {
+        storeId: 'store-b01',
+        productId: 'prod1',
+        quantityChange: 5,
+        reason: 'ตรวจนับสต็อกพบส่วนต่าง',
+      },
+      { context: {} },
+    );
+
+    expect(result).toMatchObject({ movementType: 'ADJUSTMENT', quantityChange: 5 });
+    // The reason is the adjustment's source document; the movement type is fixed, never taken
+    // from the request.
+    expect(post).toHaveBeenCalledWith(expect.anything(), {
+      storeId: 'store-b01',
+      productId: 'prod1',
+      quantityChange: 5,
+      movementType: 'ADJUSTMENT',
+      sourceDocument: 'ตรวจนับสต็อกพบส่วนต่าง',
+      actorId: 'user-manager',
+    });
+    // The adjustment is audited with actor, source document (reason) and outcome (AC4, NFR-03).
+    expect(recordAudit).toHaveBeenCalledWith(expect.anything(), {
+      actorId: 'user-manager',
+      action: 'STOCK_ADJUSTMENT',
+      sourceDocument: 'ตรวจนับสต็อกพบส่วนต่าง',
+      outcome: 'SUCCESS',
+    });
+  });
+
+  it('rejects a reduction greater than the available balance and still audits the rejection (AC2, AC4)', async () => {
+    const checkViolation = Object.assign(new Error('check constraint'), {
+      code: 'P2039',
+      meta: { driverAdapterError: { cause: { code: '23514' } } },
+    });
+    vi.spyOn(database, 'postStockMovement').mockRejectedValue(checkViolation);
+    const recordAudit = vi.spyOn(database, 'recordAudit').mockResolvedValue({} as never);
+    const controller = await createController({});
+
+    try {
+      await call(
+        controller.adjust(manager),
+        {
+          storeId: 'store-b01',
+          productId: 'prod1',
+          quantityChange: -999,
+          reason: 'นับสต็อกผิดพลาด',
+        },
+        { context: {} },
+      );
+      expect.unreachable('expected the adjustment to be rejected');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ORPCError);
+      expect((error as ORPCError<string, unknown>).code).toBe('CONFLICT');
+    }
+
+    // Rejected and no movement is written (AC2), but the attempt is still audited (AC4, NFR-03).
+    expect(recordAudit).toHaveBeenCalledWith(expect.anything(), {
+      actorId: 'user-manager',
+      action: 'STOCK_ADJUSTMENT',
+      sourceDocument: 'นับสต็อกผิดพลาด',
+      outcome: 'REJECTED',
+    });
+  });
+
+  it('rejects an adjustment with no reason before reaching the posting mechanism', async () => {
+    const post = vi.spyOn(database, 'postStockMovement');
+    const controller = await createController({});
+
+    await expect(
+      call(
+        controller.adjust(manager),
+        { storeId: 'store-b01', productId: 'prod1', quantityChange: 5, reason: '' },
+        { context: {} },
+      ),
+    ).rejects.toThrow();
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('restricts adjusting to Managers (a store employee or administrator is rejected by the guard, AC3)', () => {
+    const reflector = new Reflector();
+    expect(reflector.get(ROLES_KEY, StockController.prototype.adjust)).toEqual(['MANAGER']);
   });
 });

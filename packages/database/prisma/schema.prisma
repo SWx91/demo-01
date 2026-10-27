@@ -105,6 +105,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   stockMovements StockMovement[]
+  auditLogs      AuditLog[]
 }
 
 /// The current stock balance of a product in a store (US-14: opening plus every successful
@@ -145,4 +146,25 @@ model StockMovement {
   createdAt      DateTime     @default(now())
 
   @@index([storeId, productId])
+}
+
+/// A cross-cutting audit trail entry (NFR-03): who acted, what source document drove the action,
+/// and its outcome, with a timestamp. Established by ticket #17 for manager stock adjustments;
+/// the sibling actions NFR-03 also names (purchase order approvals, goods receipts, sales) write
+/// their own rows the same way. Written independently of whatever transaction the audited action
+/// ran in, so a rejected action (which rolls its own transaction back) still leaves an entry.
+model AuditLog {
+  id             String   @id @default(cuid())
+  actorId        String
+  actor          User     @relation(fields: [actorId], references: [id])
+  /// What was audited, e.g. "STOCK_ADJUSTMENT". Free text: each audited action names its own.
+  action         String
+  /// The document or reason that drove the action (a manual adjustment's mandatory reason, a PO
+  /// number, a receipt number).
+  sourceDocument String
+  /// The result, e.g. "SUCCESS" or "REJECTED". Free text: each audited action names its own.
+  outcome        String
+  createdAt      DateTime @default(now())
+
+  @@index([action, createdAt])
 }

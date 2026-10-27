@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { recordAudit } from './audit.js';
 import {
   disconnectHarness,
   prisma,
@@ -171,6 +172,75 @@ describe('postStockMovement on a real Postgres', () => {
     });
 
     await expect(prisma.stockMovement.delete({ where: { id: movement.id } })).rejects.toThrow();
+  });
+});
+
+// Manager stock adjustment (ticket #17, INV-05, NFR-03). The adjustment reuses postStockMovement
+// (ADJUSTMENT is just another movement type), so the atomic/rollback behaviour above already
+// covers it. What's new is the audit entry recordAudit writes, proven here against a real
+// Postgres: it survives a rolled-back posting (it is its own write, not inside the posting's
+// transaction) and persists actor, source document (the reason) and outcome.
+describe('manager stock adjustment and its audit entry on a real Postgres', () => {
+  it('posts an ADJUSTMENT movement and records a SUCCESS audit entry with actor, reason and outcome', async () => {
+    const { storeId, productId, actorId } = scenario;
+    const movement = await postStockMovement(prisma, {
+      storeId,
+      productId,
+      quantityChange: 5,
+      movementType: 'ADJUSTMENT',
+      sourceDocument: 'ตรวจนับสต็อกพบส่วนต่าง',
+      actorId,
+    });
+    expect(movement.balanceAfter).toBe(15);
+
+    const entry = await recordAudit(prisma, {
+      actorId,
+      action: 'STOCK_ADJUSTMENT',
+      sourceDocument: 'ตรวจนับสต็อกพบส่วนต่าง',
+      outcome: 'SUCCESS',
+    });
+
+    const persisted = await prisma.auditLog.findUniqueOrThrow({ where: { id: entry.id } });
+    expect(persisted).toMatchObject({
+      actorId,
+      action: 'STOCK_ADJUSTMENT',
+      sourceDocument: 'ตรวจนับสต็อกพบส่วนต่าง',
+      outcome: 'SUCCESS',
+    });
+    expect(persisted.createdAt).toBeInstanceOf(Date);
+  });
+
+  it('rejects a reduction greater than the available balance, writes no movement, but still audits the rejection (AC2, AC4)', async () => {
+    const { storeId, productId, actorId } = scenario;
+
+    await expect(
+      postStockMovement(prisma, {
+        storeId,
+        productId,
+        quantityChange: -20,
+        movementType: 'ADJUSTMENT',
+        sourceDocument: 'ตรวจนับสต็อกผิดพลาด',
+        actorId,
+      }),
+    ).rejects.toThrow();
+
+    // No movement was written: the whole posting rolled back (AC2).
+    expect(await prisma.stockMovement.count()).toBe(0);
+    const balance = await prisma.stockBalance.findUniqueOrThrow({
+      where: { storeId_productId: { storeId, productId } },
+    });
+    expect(balance.quantity).toBe(10);
+
+    // The rejection is still audited: recordAudit is its own write, independent of the posting's
+    // rolled-back transaction.
+    const entry = await recordAudit(prisma, {
+      actorId,
+      action: 'STOCK_ADJUSTMENT',
+      sourceDocument: 'ตรวจนับสต็อกผิดพลาด',
+      outcome: 'REJECTED',
+    });
+    const persisted = await prisma.auditLog.findUniqueOrThrow({ where: { id: entry.id } });
+    expect(persisted).toMatchObject({ actorId, outcome: 'REJECTED' });
   });
 });
 

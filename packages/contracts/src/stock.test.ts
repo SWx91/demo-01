@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AdjustStockSchema,
   MovementTypeSchema,
   PostStockMovementSchema,
   StockBalanceSchema,
@@ -137,6 +138,63 @@ describe('PostStockMovementSchema', () => {
       quantityChange: 2.5,
       movementType: 'RECEIPT',
       sourceDocument: 'PO-1',
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('AdjustStockSchema', () => {
+  it('accepts a manager adjustment with a nonzero change and a reason (INV-05)', () => {
+    const result = AdjustStockSchema.safeParse({
+      storeId: 'store-b01',
+      productId: 'prod1',
+      quantityChange: 5,
+      reason: 'ตรวจนับสต็อกพบส่วนต่าง',
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a decrease', () => {
+    const result = AdjustStockSchema.safeParse({
+      storeId: 'store-b01',
+      productId: 'prod1',
+      quantityChange: -2,
+      reason: 'สินค้าเสียหาย',
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a missing reason (the reason is mandatory, INV-05)', () => {
+    const result = AdjustStockSchema.safeParse({
+      storeId: 'store-b01',
+      productId: 'prod1',
+      quantityChange: 5,
+      reason: '',
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a zero quantity change (an adjustment must change the balance)', () => {
+    const result = AdjustStockSchema.safeParse({
+      storeId: 'store-b01',
+      productId: 'prod1',
+      quantityChange: 0,
+      reason: 'ตรวจนับสต็อกพบส่วนต่าง',
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a fractional quantity change', () => {
+    const result = AdjustStockSchema.safeParse({
+      storeId: 'store-b01',
+      productId: 'prod1',
+      quantityChange: 2.5,
+      reason: 'ตรวจนับสต็อกพบส่วนต่าง',
     });
 
     expect(result.success).toBe(false);
