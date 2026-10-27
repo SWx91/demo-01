@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClient } from '@/lib/query-client';
 import { mockApi } from '@/test/mock-api';
-import { ProductsPage } from './products';
+import { ProductEditForm, ProductsPage } from './products';
 
 const administrator = {
   id: '1',
@@ -168,5 +168,87 @@ describe('ProductsPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('กรุณากรอกราคาขายให้ถูกต้อง');
     const postCall = fetch.mock.calls.find(([request]) => request.method === 'POST');
     expect(postCall).toBeUndefined();
+  });
+});
+
+const existingProduct = {
+  id: 'prod1',
+  sku: 'SKU001',
+  name: 'Jasmine Rice 5kg',
+  category: 'Groceries',
+  unit: 'bag',
+  sellingPriceMinor: 12500,
+  active: true,
+};
+
+function renderEditForm() {
+  return render(
+    <QueryClientProvider client={createQueryClient()}>
+      <ProductEditForm product={existingProduct} />
+    </QueryClientProvider>,
+  );
+}
+
+describe('ProductEditForm', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('edits a product and confirms success in Thai, sending the mutated fields as satang', async () => {
+    const fetch = mockApi({
+      'PUT /products/prod1': {
+        ...existingProduct,
+        name: 'Jasmine Rice 10kg',
+        sellingPriceMinor: 24000,
+      },
+    });
+
+    renderEditForm();
+    // The form is prefilled with the product's current values.
+    expect(screen.getByLabelText('ชื่อสินค้า')).toHaveValue('Jasmine Rice 5kg');
+    expect(screen.getByLabelText('ราคาขาย (บาท)')).toHaveValue(125);
+
+    fireEvent.change(screen.getByLabelText('ชื่อสินค้า'), {
+      target: { value: 'Jasmine Rice 10kg' },
+    });
+    fireEvent.change(screen.getByLabelText('ราคาขาย (บาท)'), { target: { value: '240.00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('บันทึกสินค้าเรียบร้อยแล้ว');
+
+    const putCall = fetch.mock.calls.find(
+      ([request]) => request.method === 'PUT' && request.url.endsWith('/api/products/prod1'),
+    );
+    expect(putCall).toBeDefined();
+    const body = JSON.parse(await putCall![0].clone().text());
+    expect(body.name).toBe('Jasmine Rice 10kg');
+    expect(body.sellingPriceMinor).toBe(24000);
+  });
+
+  it('shows a loading state on the button while the edit is pending', async () => {
+    // A fetch that never resolves keeps the mutation pending so the loading label stays visible.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise(() => {})),
+    );
+
+    renderEditForm();
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+
+    expect(await screen.findByRole('button', { name: 'กำลังบันทึก…' })).toBeDisabled();
+  });
+
+  it('falls back to a generic Thai error without leaking a stack trace', async () => {
+    mockApi({
+      'PUT /products/prod1': Response.json(
+        { defined: false, code: 'INTERNAL_SERVER_ERROR', status: 500, message: 'boom at line 42' },
+        { status: 500 },
+      ),
+    });
+
+    renderEditForm();
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+
+    const alert = await screen.findByRole('alert', {}, { timeout: 3000 });
+    expect(alert).toHaveTextContent('ไม่สามารถบันทึกสินค้าได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่');
+    expect(alert).not.toHaveTextContent('boom at line 42');
   });
 });

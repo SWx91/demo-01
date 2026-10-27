@@ -1,4 +1,4 @@
-import type { CreateProductInput } from '@erp/contracts';
+import type { CreateProductInput, Product, UpdateProductInput } from '@erp/contracts';
 import { ORPCError } from '@orpc/client';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -23,6 +23,11 @@ const EMPTY_FORM: ProductForm = { sku: '', name: '', category: '', unit: '', pri
 /** Convert a baht amount (e.g. "125.00") to integer minor units (satang): 12500. */
 function bahtToMinorUnits(baht: number): number {
   return Math.round(baht * 100);
+}
+
+/** Convert integer minor units (satang) back to a baht string for prefilling the form: 12500 → "125.00". */
+function minorUnitsToBaht(minor: number): string {
+  return (minor / 100).toFixed(2);
 }
 
 /** Parse a baht string to a finite number, or null when blank or not a number. */
@@ -152,4 +157,114 @@ function ProductForm() {
 function createErrorMessage(error: Error): string {
   if (error instanceof ORPCError && error.code === 'CONFLICT') return error.message;
   return 'ไม่สามารถบันทึกสินค้าได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่';
+}
+
+/**
+ * Administrator-only screen to edit a product's mutable fields (name, category, unit, selling
+ * price, active status). The SKU is shown read-only — it is immutable in this ticket. Prefilled
+ * from the product's current values; saves through the typed oRPC `update` route with Thai
+ * loading/success/error states, reusing the same baht↔satang conversion as create.
+ */
+export function ProductEditForm({ product }: { product: Product }) {
+  const [form, setForm] = useState<ProductForm>({
+    sku: product.sku,
+    name: product.name,
+    category: product.category,
+    unit: product.unit,
+    priceBaht: minorUnitsToBaht(product.sellingPriceMinor),
+  });
+  const [active, setActive] = useState(product.active);
+  const [priceError, setPriceError] = useState<string | null>(null);
+
+  const update = useMutation(orpc.products.update.mutationOptions());
+
+  const field = (key: keyof ProductForm) => (event: { target: { value: string } }) =>
+    setForm((f) => ({ ...f, [key]: event.target.value }));
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>แก้ไขสินค้า</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const baht = parseBaht(form.priceBaht);
+            if (baht === null) {
+              setPriceError(INVALID_PRICE_MESSAGE);
+              return;
+            }
+            setPriceError(null);
+            const input: UpdateProductInput = {
+              id: product.id,
+              name: form.name,
+              category: form.category,
+              unit: form.unit,
+              sellingPriceMinor: bahtToMinorUnits(baht),
+              active,
+            };
+            update.mutate(input);
+          }}
+        >
+          <div className="space-y-1">
+            <Label htmlFor="edit-product-sku">รหัสสินค้า (SKU)</Label>
+            <Input id="edit-product-sku" value={form.sku} readOnly disabled />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-product-name">ชื่อสินค้า</Label>
+            <Input id="edit-product-name" value={form.name} onChange={field('name')} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-product-category">หมวดหมู่</Label>
+            <Input id="edit-product-category" value={form.category} onChange={field('category')} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-product-unit">หน่วยนับ</Label>
+            <Input id="edit-product-unit" value={form.unit} onChange={field('unit')} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-product-price">ราคาขาย (บาท)</Label>
+            <Input
+              id="edit-product-price"
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.priceBaht}
+              onChange={field('priceBaht')}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              id="edit-product-active"
+              type="checkbox"
+              checked={active}
+              onChange={(event) => setActive(event.target.checked)}
+            />
+            <Label htmlFor="edit-product-active">เปิดใช้งาน</Label>
+          </div>
+          <Button type="submit" disabled={update.isPending}>
+            {update.isPending ? 'กำลังบันทึก…' : 'บันทึก'}
+          </Button>
+          {update.isSuccess && (
+            <p role="status" className="w-full text-sm text-muted-foreground">
+              บันทึกสินค้าเรียบร้อยแล้ว
+            </p>
+          )}
+          {priceError ? (
+            <p role="alert" className="w-full text-destructive">
+              {priceError}
+            </p>
+          ) : (
+            update.isError && (
+              <p role="alert" className="w-full text-destructive">
+                {createErrorMessage(update.error)}
+              </p>
+            )
+          )}
+        </form>
+      </CardContent>
+    </Card>
+  );
 }

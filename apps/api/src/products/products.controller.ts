@@ -45,4 +45,13 @@ export class ProductsController {
       ),
     );
   }
+
+  @Roles('ADMINISTRATOR')
+  @Implement(contract.products.update)
+  update() {
+    return implement(contract.products.update).handler(({ input }) => {
+      const { id, ...data } = input;
+      return this.prisma.product.update({ where: { id }, data, select: PRODUCT_SELECT });
+    });
+  }
 }

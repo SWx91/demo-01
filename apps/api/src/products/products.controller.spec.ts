@@ -93,4 +93,56 @@ describe('ProductsController', () => {
       'ADMINISTRATOR',
     ]);
   });
+
+  it('edits a product, updating the mutable fields by id', async () => {
+    const updated = { id: 'prod1', ...input, name: 'Jasmine Rice 10kg', sellingPriceMinor: 24000 };
+    const update = vi.fn().mockResolvedValue(updated);
+    const controller = await createController({ update });
+
+    await expect(
+      call(controller.update(), {
+        id: 'prod1',
+        name: 'Jasmine Rice 10kg',
+        category: 'Groceries',
+        unit: 'bag',
+        sellingPriceMinor: 24000,
+        active: true,
+      }),
+    ).resolves.toEqual(updated);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'prod1' },
+      data: {
+        name: 'Jasmine Rice 10kg',
+        category: 'Groceries',
+        unit: 'bag',
+        sellingPriceMinor: 24000,
+        active: true,
+      },
+      select: PRODUCT_SELECT,
+    });
+  });
+
+  it('rejects a negative selling price on edit before reaching Prisma', async () => {
+    const update = vi.fn();
+    const controller = await createController({ update });
+
+    await expect(
+      call(controller.update(), {
+        id: 'prod1',
+        name: 'Jasmine Rice 5kg',
+        category: 'Groceries',
+        unit: 'bag',
+        sellingPriceMinor: -1,
+        active: true,
+      }),
+    ).rejects.toThrow();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('restricts edit to an Administrator (non-admins rejected by the guard)', () => {
+    const reflector = new Reflector();
+    expect(reflector.get(ROLES_KEY, ProductsController.prototype.update)).toEqual([
+      'ADMINISTRATOR',
+    ]);
+  });
 });
