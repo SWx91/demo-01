@@ -1,4 +1,4 @@
-import { createPrismaClient, hashPassword, Role } from '../src/index.js';
+import { createPrismaClient, hashPassword, type PrismaClient, Role } from '../src/index.js';
 
 const prisma = createPrismaClient(
   process.env.DATABASE_URL ?? 'postgresql://erp:erp@localhost:5432/erp',
@@ -91,7 +91,7 @@ const demoUsers: {
 ];
 const DEMO_PASSWORD = 'password';
 
-async function main() {
+export async function seedDatabase(prisma: PrismaClient): Promise<void> {
   const passwordHash = await hashPassword(DEMO_PASSWORD);
 
   const storesByCode = new Map<string, string>();
@@ -172,8 +172,12 @@ async function main() {
   );
 }
 
-try {
-  await main();
-} finally {
-  await prisma.$disconnect();
+// Run the seed only when this file is executed directly (Prisma's `tsx prisma/seed.ts`), not when
+// imported — e.g. by the integration spec that re-seeds and asserts the opening balances.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  try {
+    await seedDatabase(prisma);
+  } finally {
+    await prisma.$disconnect();
+  }
 }

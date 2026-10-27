@@ -15,7 +15,8 @@ against a **real Postgres**, not a stubbed client:
 These live in the `*.integration.spec.ts` files and run on the harness in
 [`src/stock.integration.harness.ts`](src/stock.integration.harness.ts). The harness owns one shared
 Prisma client, resets the stock tables between scenarios, and seeds each scenario its own world, so
-scenarios pass in any order.
+scenarios pass in any order. A sibling spec (`src/seed.integration.spec.ts`) re-seeds and asserts
+the seed's opening balances, independent of the reset suite's truncation.
 
 ### Setup
 
