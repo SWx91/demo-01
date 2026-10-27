@@ -170,10 +170,12 @@ function createErrorMessage(error: Error): string {
 }
 
 /**
- * Administrator-only screen to edit a product's mutable fields (name, category, unit, selling
- * price, active status). The SKU is shown read-only — it is immutable in this ticket. Prefilled
- * from the product's current values; saves through the typed oRPC `update` route with Thai
- * loading/success/error states, reusing the same baht↔satang conversion as create.
+ * Administrator-only screen to edit a product's fields, including the SKU (name, category,
+ * unit, selling price, active status). The SKU stays editable here; the API rejects a changed
+ * value once a stock movement references the product (MD-01) and the Thai CONFLICT it returns
+ * surfaces through the same error path as any other save failure. Prefilled from the product's
+ * current values; saves through the typed oRPC `update` route with Thai loading/success/error
+ * states, reusing the same baht↔satang conversion as create.
  */
 export function ProductEditForm({ product }: { product: Product }) {
   const [form, setForm] = useState<ProductForm>({
@@ -209,6 +211,7 @@ export function ProductEditForm({ product }: { product: Product }) {
             setPriceError(null);
             const input: UpdateProductInput = {
               id: product.id,
+              sku: form.sku,
               name: form.name,
               category: form.category,
               unit: form.unit,
@@ -218,24 +221,30 @@ export function ProductEditForm({ product }: { product: Product }) {
             update.mutate(input);
           }}
         >
+          {/*
+            Labelled distinctly from the create form above (e.g. "แก้ไขชื่อสินค้า" vs
+            "ชื่อสินค้า") because both forms are on screen at once once a product has just been
+            created: an identical accessible name on two visible fields would be ambiguous for a
+            screen reader and for the Playwright locators in apps/e2e that must reach this one.
+          */}
           <div className="space-y-1">
-            <Label htmlFor="edit-product-sku">รหัสสินค้า (SKU)</Label>
-            <Input id="edit-product-sku" value={form.sku} readOnly disabled />
+            <Label htmlFor="edit-product-sku">แก้ไขรหัสสินค้า (SKU)</Label>
+            <Input id="edit-product-sku" value={form.sku} onChange={field('sku')} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="edit-product-name">ชื่อสินค้า</Label>
+            <Label htmlFor="edit-product-name">แก้ไขชื่อสินค้า</Label>
             <Input id="edit-product-name" value={form.name} onChange={field('name')} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="edit-product-category">หมวดหมู่</Label>
+            <Label htmlFor="edit-product-category">แก้ไขหมวดหมู่</Label>
             <Input id="edit-product-category" value={form.category} onChange={field('category')} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="edit-product-unit">หน่วยนับ</Label>
+            <Label htmlFor="edit-product-unit">แก้ไขหน่วยนับ</Label>
             <Input id="edit-product-unit" value={form.unit} onChange={field('unit')} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="edit-product-price">ราคาขาย (บาท)</Label>
+            <Label htmlFor="edit-product-price">แก้ไขราคาขาย (บาท)</Label>
             <Input
               id="edit-product-price"
               type="number"
@@ -254,8 +263,11 @@ export function ProductEditForm({ product }: { product: Product }) {
             />
             <Label htmlFor="edit-product-active">เปิดใช้งาน</Label>
           </div>
+          {/* Labelled distinctly from the create form's "บันทึก" button for the same reason as
+          the fields above: both buttons are on screen together once a product has just been
+          created. */}
           <Button type="submit" disabled={update.isPending}>
-            {update.isPending ? 'กำลังบันทึก…' : 'บันทึก'}
+            {update.isPending ? 'กำลังบันทึก…' : 'บันทึกการแก้ไข'}
           </Button>
           {update.isSuccess && (
             <p role="status" className="w-full text-sm text-muted-foreground">

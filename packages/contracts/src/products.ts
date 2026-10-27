@@ -45,11 +45,15 @@ export const CreateProductSchema = z.object({
 export type CreateProductInput = z.infer<typeof CreateProductSchema>;
 
 /**
- * Editing a product: the id plus the mutable fields. The SKU is deliberately absent — it is
- * immutable here and handled by a later immutability ticket. Same Thai validation as create.
+ * Editing a product: the id plus every mutable field, including the SKU. The SKU is only
+ * actually mutable until a stock movement references the product (MD-01); past that point the
+ * API rejects a changed value while every other field here stays editable. That freeze is a
+ * runtime check against the product's movement history, not something this schema can express,
+ * so it accepts the same Thai-validated SKU shape as create. Same Thai validation as create.
  */
 export const UpdateProductSchema = z.object({
   id: z.string().min(1),
+  sku: z.string().trim().min(1, 'กรุณากรอกรหัสสินค้า (SKU)'),
   name: z.string().trim().min(1, 'กรุณากรอกชื่อสินค้า'),
   category: z.string().trim().min(1, 'กรุณากรอกหมวดหมู่สินค้า'),
   unit: z.string().trim().min(1, 'กรุณากรอกหน่วยนับ'),
@@ -94,7 +98,7 @@ export const productsContract = {
     .route({
       method: 'PUT',
       path: '/products/{id}',
-      summary: 'Edit a product (mutable fields; SKU is immutable)',
+      summary: 'Edit a product (SKU is frozen once a stock movement references it, MD-01)',
       tags: ['Products'],
     })
     .input(UpdateProductSchema)

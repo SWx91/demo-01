@@ -7,6 +7,7 @@ export { postStockMovement } from './stock.js';
 export type { PostStockMovementInput } from './stock.js';
 export { recordAudit } from './audit.js';
 export type { RecordAuditInput } from './audit.js';
+export { isSkuEditable } from './products.js';
 
 /** Prisma 7 talks to Postgres through a driver adapter (node-postgres). */
 export function createPrismaAdapter(connectionString: string) {

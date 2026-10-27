@@ -1,5 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { contract } from '@erp/contracts';
+import { isSkuEditable } from '@erp/database';
 import { Implement, implement, ORPCError } from '@orpc/nest';
 import { Roles } from '../auth/auth.decorators.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -49,9 +50,28 @@ export class ProductsController {
   @Roles('ADMINISTRATOR')
   @Implement(contract.products.update)
   update() {
-    return implement(contract.products.update).handler(({ input }) => {
-      const { id, ...data } = input;
-      return this.prisma.product.update({ where: { id }, data, select: PRODUCT_SELECT });
+    return implement(contract.products.update).handler(async ({ input }) => {
+      const { id, sku, ...data } = input;
+      const existing = await this.prisma.product.findUniqueOrThrow({
+        where: { id },
+        select: { sku: true },
+      });
+
+      // MD-01: the SKU can still be corrected until a stock movement references the product;
+      // past that point it is frozen while every other field here stays editable.
+      if (!(await isSkuEditable(this.prisma, id, existing.sku, sku))) {
+        throw new ORPCError('CONFLICT', {
+          message: `ไม่สามารถเปลี่ยนรหัสสินค้า (SKU) จาก "${existing.sku}" ได้ เนื่องจากมีการเคลื่อนไหวสต็อกอ้างอิงสินค้านี้แล้ว`,
+        });
+      }
+
+      return withDuplicateSkuGuard(sku, () =>
+        this.prisma.product.update({
+          where: { id },
+          data: { sku, ...data },
+          select: PRODUCT_SELECT,
+        }),
+      );
     });
   }
 
