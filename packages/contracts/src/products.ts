@@ -58,6 +58,28 @@ export const UpdateProductSchema = z.object({
 });
 export type UpdateProductInput = z.infer<typeof UpdateProductSchema>;
 
+/**
+ * Deactivating or reactivating a product: the id plus the target active flag. Deactivating keeps
+ * the product in the catalogue and searchable in historical records (MD-02); it only stops the
+ * product from being added to new documents, enforced by the shared guard (US-07).
+ */
+export const SetProductActiveSchema = z.object({
+  id: z.string().min(1, 'กรุณาเลือกสินค้า'),
+  active: z.boolean(),
+});
+export type SetProductActiveInput = z.infer<typeof SetProductActiveSchema>;
+
+/**
+ * Searching the product catalogue. `query` matches SKU or name; omitting it returns everything.
+ * `activeOnly` defaults to false so historical searches still surface deactivated products
+ * (MD-02); set it to true when picking a product for a new document so inactive ones are hidden.
+ */
+export const SearchProductsSchema = z.object({
+  query: z.string().trim().optional(),
+  activeOnly: z.boolean().default(false),
+});
+export type SearchProductsInput = z.infer<typeof SearchProductsSchema>;
+
 export const productsContract = {
   create: oc
     .route({
@@ -77,4 +99,22 @@ export const productsContract = {
     })
     .input(UpdateProductSchema)
     .output(ProductSchema),
+  setActive: oc
+    .route({
+      method: 'PATCH',
+      path: '/products/{id}/active',
+      summary: 'Deactivate or reactivate a product (stays searchable; blocked from new documents)',
+      tags: ['Products'],
+    })
+    .input(SetProductActiveSchema)
+    .output(ProductSchema),
+  search: oc
+    .route({
+      method: 'GET',
+      path: '/products',
+      summary: 'Search the product catalogue (includes inactive products for historical searches)',
+      tags: ['Products'],
+    })
+    .input(SearchProductsSchema)
+    .output(z.array(ProductSchema)),
 };

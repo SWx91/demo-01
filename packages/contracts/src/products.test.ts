@@ -3,6 +3,8 @@ import {
   CreateProductSchema,
   ProductSchema,
   QuantitySchema,
+  SearchProductsSchema,
+  SetProductActiveSchema,
   UpdateProductSchema,
 } from './products.js';
 
@@ -144,5 +146,53 @@ describe('UpdateProductSchema', () => {
 
   it('rejects an empty name', () => {
     expect(UpdateProductSchema.safeParse({ ...validUpdate, name: '' }).success).toBe(false);
+  });
+});
+
+describe('SetProductActiveSchema', () => {
+  it('accepts an id plus a boolean active flag (deactivate)', () => {
+    const result = SetProductActiveSchema.safeParse({ id: 'prod1', active: false });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.active).toBe(false);
+    }
+  });
+
+  it('accepts reactivation (active true)', () => {
+    expect(SetProductActiveSchema.safeParse({ id: 'prod1', active: true }).success).toBe(true);
+  });
+
+  it('rejects a missing id', () => {
+    expect(SetProductActiveSchema.safeParse({ active: false }).success).toBe(false);
+  });
+
+  it('rejects a non-boolean active flag', () => {
+    expect(SetProductActiveSchema.safeParse({ id: 'prod1', active: 'no' }).success).toBe(false);
+  });
+});
+
+describe('SearchProductsSchema', () => {
+  it('accepts an empty search (returns the whole catalogue)', () => {
+    expect(SearchProductsSchema.safeParse({}).success).toBe(true);
+  });
+
+  it('includes inactive products by default (historical searchability)', () => {
+    const result = SearchProductsSchema.safeParse({});
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.activeOnly).toBe(false);
+    }
+  });
+
+  it('accepts a free-text query and an activeOnly filter', () => {
+    const result = SearchProductsSchema.safeParse({ query: 'rice', activeOnly: true });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.query).toBe('rice');
+      expect(result.data.activeOnly).toBe(true);
+    }
   });
 });
