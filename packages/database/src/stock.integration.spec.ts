@@ -127,23 +127,25 @@ describe('postStockMovement (Postgres integration)', () => {
       }),
     ]);
 
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const applied = results
+      .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof postStockMovement>>> => {
+        return r.status === 'fulfilled';
+      })
+      .map((r) => r.value.quantityChange);
     const balance = await prisma.stockBalance.findUniqueOrThrow({
       where: { storeId_productId: { storeId, productId } },
     });
     const movements = await prisma.stockMovement.count({ where: { storeId, productId } });
 
-    // Either both applied (final balance reflects both: 10+5+3=18, two movements) or the guard
-    // correctly rejected one (final balance reflects the winner, one movement). Never a lost
-    // update: the final balance is never 10 and never only one of the two changes silently dropped.
-    if (succeeded === 2) {
-      expect(balance.quantity).toBe(18);
-      expect(movements).toBe(2);
-    } else {
-      expect(succeeded).toBe(1);
-      expect([15, 13]).toContain(balance.quantity);
-      expect(movements).toBe(1);
-    }
+    // No update is lost: the final balance is exactly the opening plus every change that was
+    // reported as applied, and there is exactly one movement per applied change. Whether the race
+    // let both through or the guard/serialization rejected one, these two equalities must hold —
+    // a silently dropped update would break them.
+    const expectedBalance = 10 + applied.reduce((sum, change) => sum + change, 0);
+    expect(balance.quantity).toBe(expectedBalance);
+    expect(movements).toBe(applied.length);
+    // At least one posting always makes progress, and the balance never silently reverts to 10.
+    expect(applied.length).toBeGreaterThanOrEqual(1);
   });
 
   it('refuses to update a confirmed movement (US-13 immutable)', async () => {

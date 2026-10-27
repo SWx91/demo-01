@@ -65,6 +65,8 @@ describe('StockController', () => {
       sourceDocument: 'PO-1',
       actorId: 'user1',
     });
+    // The movement carries a timestamp (normalised to an ISO string by the contract).
+    expect(result.createdAt).toBe('2026-01-01T00:00:00.000Z');
     // The actor is derived from the signed-in user, never taken from request input.
     expect(post).toHaveBeenCalledWith(expect.anything(), {
       storeId: 'store-b01',
