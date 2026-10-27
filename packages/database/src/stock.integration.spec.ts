@@ -1,60 +1,34 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createPrismaClient } from './index.js';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  disconnectHarness,
+  prisma,
+  resetStockData,
+  seedScenario,
+  type Scenario,
+} from './stock.integration.harness.js';
 import { postStockMovement } from './stock.js';
 
-// A real Postgres is required: INV-03 (non-negative) and INV-04 (no lost update) are storage-layer
-// guarantees, not application logic. The workshop always has Postgres up; the seed uses the same
-// default URL. Stock movements are immutable by design (US-13) — the database blocks UPDATE and
-// DELETE on them — so this spec never deletes movements. It gives every test a fresh product so
-// its movement history is its own, and scopes all counts to that product.
-const prisma = createPrismaClient(
-  process.env.DATABASE_URL ?? 'postgresql://erp:erp@localhost:5432/erp',
-);
+// The inventory invariants proven against a real Postgres, on the harness (ticket #14). INV-03
+// (non-negative balance, atomic posting) and INV-04 (no lost update) are storage-layer guarantees,
+// not application logic, so they can only be proven against a real database. Every scenario resets
+// the stock tables first (`resetStockData`) and then seeds its own world (`seedScenario`), so no
+// scenario depends on another's outcome and the scenarios pass in any order. Run with
+// `pnpm --filter @erp/database test:integration`; see stock.integration.harness.ts for setup.
 
-const RUN = `itest-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-let storeId: string;
-let actorId: string;
-let productSeq = 0;
+let scenario: Scenario;
 
-beforeAll(async () => {
-  const store = await prisma.store.create({
-    data: { code: `${RUN}-S`, name: 'Integration Store' },
-  });
-  const actor = await prisma.user.create({
-    data: { email: `${RUN}@test.local`, name: 'Integration Actor', passwordHash: 'x' },
-  });
-  storeId = store.id;
-  actorId = actor.id;
+beforeEach(async () => {
+  await resetStockData();
+  scenario = await seedScenario(10);
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await disconnectHarness();
 });
 
-/** A fresh product with an opening balance of 10, so each test owns its own movement history. */
-async function freshProductWithOpeningBalance(opening = 10): Promise<string> {
-  const product = await prisma.product.create({
-    data: {
-      sku: `${RUN}-SKU-${productSeq++}`,
-      name: 'Integration Product',
-      category: 'Test',
-      unit: 'unit',
-      sellingPriceMinor: 100,
-    },
-  });
-  await prisma.stockBalance.create({
-    data: { storeId, productId: product.id, quantity: opening, version: 0 },
-  });
-  return product.id;
-}
-
-let productId: string;
-beforeEach(async () => {
-  productId = await freshProductWithOpeningBalance(10);
-});
-
-describe('postStockMovement (Postgres integration)', () => {
+describe('postStockMovement on a real Postgres', () => {
   it('commits the balance change and the movement together (INV-03 atomic)', async () => {
+    const { storeId, productId, actorId } = scenario;
     const movement = await postStockMovement(prisma, {
       storeId,
       productId,
@@ -72,7 +46,7 @@ describe('postStockMovement (Postgres integration)', () => {
     });
     expect(balance.quantity).toBe(18);
 
-    // The persisted movement row records every field the ticket requires: product, store, quantity
+    // The persisted movement row records every field the model requires: product, store, quantity
     // change, balance before and after, movement type, source document, actor and a timestamp.
     const persisted = await prisma.stockMovement.findUniqueOrThrow({ where: { id: movement.id } });
     expect(persisted).toMatchObject({
@@ -86,10 +60,11 @@ describe('postStockMovement (Postgres integration)', () => {
       actorId,
     });
     expect(persisted.createdAt).toBeInstanceOf(Date);
-    expect(await prisma.stockMovement.count({ where: { storeId, productId } })).toBe(1);
+    expect(await prisma.stockMovement.count()).toBe(1);
   });
 
   it('rolls the movement back when the balance would go negative (all or nothing)', async () => {
+    const { storeId, productId, actorId } = scenario;
     await expect(
       postStockMovement(prisma, {
         storeId,
@@ -105,11 +80,12 @@ describe('postStockMovement (Postgres integration)', () => {
       where: { storeId_productId: { storeId, productId } },
     });
     expect(balance.quantity).toBe(10);
-    // The whole posting rolled back: no movement was recorded for this product.
-    expect(await prisma.stockMovement.count({ where: { storeId, productId } })).toBe(0);
+    // The whole posting rolled back: no movement was recorded.
+    expect(await prisma.stockMovement.count()).toBe(0);
   });
 
   it('refuses to drive the balance below zero (INV-03, enforced by the database)', async () => {
+    const { storeId, productId, actorId } = scenario;
     await expect(
       postStockMovement(prisma, {
         storeId,
@@ -123,6 +99,7 @@ describe('postStockMovement (Postgres integration)', () => {
   });
 
   it('does not lose an update when two postings race the same product+store (INV-04)', async () => {
+    const { storeId, productId, actorId } = scenario;
     const results = await Promise.allSettled([
       postStockMovement(prisma, {
         storeId,
@@ -150,7 +127,7 @@ describe('postStockMovement (Postgres integration)', () => {
     const balance = await prisma.stockBalance.findUniqueOrThrow({
       where: { storeId_productId: { storeId, productId } },
     });
-    const movements = await prisma.stockMovement.count({ where: { storeId, productId } });
+    const movements = await prisma.stockMovement.count();
 
     // No update is lost: the final balance is exactly the opening plus every change that was
     // reported as applied, and there is exactly one movement per applied change. Whether the race
@@ -164,6 +141,7 @@ describe('postStockMovement (Postgres integration)', () => {
   });
 
   it('refuses to update a confirmed movement (US-13 immutable)', async () => {
+    const { storeId, productId, actorId } = scenario;
     const movement = await postStockMovement(prisma, {
       storeId,
       productId,
@@ -182,6 +160,7 @@ describe('postStockMovement (Postgres integration)', () => {
   });
 
   it('refuses to delete a confirmed movement (US-13 immutable)', async () => {
+    const { storeId, productId, actorId } = scenario;
     const movement = await postStockMovement(prisma, {
       storeId,
       productId,
@@ -195,29 +174,36 @@ describe('postStockMovement (Postgres integration)', () => {
   });
 });
 
-// AC-6: opening balances are seeded and observable by reading balances. This asserts the values
-// the seed writes (packages/database/prisma/seed.ts). CI runs `db:seed` before the integration
-// specs; run `pnpm db:seed` locally first if these fail.
-describe('seeded opening balances (AC-6)', () => {
-  async function balance(storeCode: string, sku: string): Promise<number | undefined> {
-    const store = await prisma.store.findUnique({ where: { code: storeCode } });
-    const product = await prisma.product.findUnique({ where: { sku } });
-    if (!store || !product) return undefined;
-    const row = await prisma.stockBalance.findUnique({
-      where: { storeId_productId: { storeId: store.id, productId: product.id } },
+// Proves the reset makes scenarios order-independent: a scenario that deliberately leaves the
+// database dirty must not change the outcome of the scenario that runs after it. The `beforeEach`
+// reset is the only thing standing between them, so if it works this count is exactly 1.
+describe('scenario isolation (reset between scenarios)', () => {
+  it('a dirty scenario leaves stock data behind', async () => {
+    const { storeId, productId, actorId } = scenario;
+    await postStockMovement(prisma, {
+      storeId,
+      productId,
+      quantityChange: 2,
+      movementType: 'RECEIPT',
+      sourceDocument: 'DIRTY',
+      actorId,
     });
-    return row?.quantity;
-  }
-
-  it('seeds B01 with SKU001=10, SKU002=5, SKU003=0', async () => {
-    expect(await balance('B01', 'SKU001')).toBe(10);
-    expect(await balance('B01', 'SKU002')).toBe(5);
-    expect(await balance('B01', 'SKU003')).toBe(0);
+    expect(await prisma.stockMovement.count()).toBe(1);
   });
 
-  it('seeds every B02 balance at zero', async () => {
-    expect(await balance('B02', 'SKU001')).toBe(0);
-    expect(await balance('B02', 'SKU002')).toBe(0);
-    expect(await balance('B02', 'SKU003')).toBe(0);
+  it('the next scenario starts from a clean slate regardless of what ran before it', async () => {
+    // No movements survive from the previous (dirty) scenario: the reset owns the starting state.
+    expect(await prisma.stockMovement.count()).toBe(0);
+
+    const { storeId, productId, actorId } = scenario;
+    await postStockMovement(prisma, {
+      storeId,
+      productId,
+      quantityChange: 4,
+      movementType: 'RECEIPT',
+      sourceDocument: 'CLEAN',
+      actorId,
+    });
+    expect(await prisma.stockMovement.count()).toBe(1);
   });
 });
