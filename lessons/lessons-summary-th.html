@@ -1,0 +1,885 @@
+<title>สรุปบทเรียน AI Coding Workshop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Bai+Jamjuree:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: sticky lesson rail on the left (top bar on phones), reading column on the right; each lesson is a "ticket" block with a mono ID strip. */
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --ink: #18231f;
+  --muted: #5a6762;
+  --line: #d9dfdb;
+  --accent: #0f6b55;      /* ready-for-agent green */
+  --accent-soft: #e2f1ec;
+  --warn: #9a5b00;
+  --warn-soft: #fbefd9;
+  --code-bg: #eef1ef;
+  --figure-bg: #ffffff;
+  --font-display: "Bai Jamjuree", "IBM Plex Sans Thai", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Thai", "Noto Sans Thai", "Sarabun", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111715; --surface: #18201d; --ink: #e4ebe8; --muted: #9aa8a2; --line: #2b3632;
+    --accent: #5fc9a8; --accent-soft: #1b3029; --warn: #f0b860; --warn-soft: #33281a;
+    --code-bg: #0c1110; --figure-bg: #f3f5f4; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111715; --surface: #18201d; --ink: #e4ebe8; --muted: #9aa8a2; --line: #2b3632;
+  --accent: #5fc9a8; --accent-soft: #1b3029; --warn: #f0b860; --warn-soft: #33281a;
+  --code-bg: #0c1110; --figure-bg: #f3f5f4; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16.5px; line-height: 1.8;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; max-width: 1180px; margin: 0 auto; padding-block: 40px 80px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.12rem; margin-top: 28px; margin-bottom: 8px; }
+p { margin: 0 0 12px; }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { font-family: var(--font-mono); font-size: .84rem; line-height: 1.6; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 0 0 14px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.cmt { color: var(--muted); }
+
+/* rail */
+nav.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; }
+.rail .label { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.rail a { display: grid; grid-template-columns: 30px 1fr; gap: 6px; padding: 7px 10px; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: .92rem; line-height: 1.45; }
+.rail a:hover { background: var(--accent-soft); }
+.rail a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.rail .n { font-family: var(--font-mono); color: var(--muted); font-size: .8rem; padding-top: 2px; }
+.rail a.done .n::after { content: " ✓"; color: var(--accent); }
+
+/* header */
+header.intro { padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 36px; }
+.eyebrow { font-family: var(--font-mono); font-size: .76rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.lead { font-size: 1.08rem; color: var(--muted); max-width: 62ch; margin-top: 14px; }
+
+/* pipeline */
+.pipeline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 22px 0 6px; }
+.step { font-size: .86rem; padding: 6px 12px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; white-space: nowrap; }
+.step b { font-family: var(--font-mono); color: var(--accent); margin-right: 4px; }
+.arrow { color: var(--muted); font-family: var(--font-mono); }
+.phase-note { font-size: .88rem; color: var(--muted); }
+
+/* glossary */
+.glossary { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; margin-bottom: 44px; }
+.glossary h2 { font-size: 1.15rem; margin-bottom: 10px; }
+.glossary dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 24px; margin: 0; }
+.glossary dt { font-family: var(--font-mono); font-size: .86rem; font-weight: 600; color: var(--accent); }
+.glossary dd { margin: 0; font-size: .92rem; color: var(--muted); line-height: 1.6; }
+
+/* lesson */
+section.lesson { padding-top: 12px; margin-bottom: 64px; scroll-margin-top: 20px; }
+.ticket-strip { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-family: var(--font-mono); font-size: .78rem; color: var(--muted); margin-bottom: 10px; }
+.ticket-strip .id { color: var(--accent); font-weight: 600; background: var(--accent-soft); padding: 2px 8px; border-radius: 4px; }
+.lesson-head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: flex-start; }
+.lesson-head > div { min-width: 0; flex: 1 1 420px; }
+.src { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+.donebox { display: inline-flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; background: var(--surface); cursor: pointer; user-select: none; }
+.donebox input { accent-color: var(--accent); width: 16px; height: 16px; }
+.goal { margin-top: 16px; padding: 14px 18px; background: var(--accent-soft); border-radius: 6px; }
+.goal strong { color: var(--accent); }
+.questions { margin: 18px 0 0; padding-left: 0; list-style: none; counter-reset: q; display: grid; gap: 6px; }
+.questions li { counter-increment: q; display: grid; grid-template-columns: 28px 1fr; }
+.questions li::before { content: "Q" counter(q); font-family: var(--font-mono); font-size: .8rem; color: var(--accent); padding-top: 4px; }
+ul.points { padding-left: 20px; margin: 0 0 12px; }
+ul.points li { margin-bottom: 6px; }
+ul.points li::marker { color: var(--accent); }
+
+figure { margin: 18px 0 22px; }
+figure .frame { background: var(--figure-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; }
+figure img { display: block; width: 100%; height: auto; max-width: 100%; }
+figcaption { font-size: .88rem; color: var(--muted); margin-top: 8px; line-height: 1.65; }
+figcaption b { color: var(--ink); }
+
+.tablewrap { overflow-x: auto; margin: 6px 0 16px; border: 1px solid var(--line); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; background: var(--surface); }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.6; }
+th { font-weight: 600; background: var(--code-bg); }
+tr:last-child td { border-bottom: none; }
+
+.callout { border: 1px solid var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 12px 16px; margin: 14px 0; font-size: .95rem; }
+.callout strong { color: var(--warn); }
+
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 20px; margin-top: 24px; }
+.summary h3 { margin-top: 0; }
+
+.quiz { margin-top: 14px; display: grid; gap: 8px; }
+.quiz details { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.quiz summary { cursor: pointer; padding: 10px 14px; font-weight: 500; list-style-position: inside; }
+.quiz details[open] summary { border-bottom: 1px solid var(--line); }
+.quiz .ans { padding: 10px 14px 12px; color: var(--muted); }
+
+footer { color: var(--muted); font-size: .86rem; border-top: 1px solid var(--line); padding-top: 18px; }
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-block: 20px 60px; }
+  nav.rail { position: static; }
+  .rail ol { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: 6px; }
+  .rail a { grid-template-columns: auto auto; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="shell">
+  <nav class="rail" aria-label="บทเรียน">
+    <div class="label">8 บทเรียน</div>
+    <ol id="nav">
+      <li><a href="#l1"><span class="n">01</span><span>Monorepo &amp; Turborepo</span></a></li>
+      <li><a href="#l2"><span class="n">02</span><span>Context engineering</span></a></li>
+      <li><a href="#l3"><span class="n">03</span><span>ตั้งค่า agent ให้สะอาด</span></a></li>
+      <li><a href="#l4"><span class="n">04</span><span>จาก TOR สู่ tickets</span></a></li>
+      <li><a href="#l5"><span class="n">05</span><span>Hooks ด่านกั้น shell</span></a></li>
+      <li><a href="#l6"><span class="n">06</span><span>Subagents</span></a></li>
+      <li><a href="#l7"><span class="n">07</span><span>จาก ticket สู่โค้ด</span></a></li>
+      <li><a href="#l8"><span class="n">08</span><span>AI รีวิว Pull Request</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="intro">
+      <div class="eyebrow">Turborepo Fullstack ERP · AI Coding Workshop</div>
+      <h1>สรุปบทเรียนฉบับภาษาไทย</h1>
+      <p class="lead">สรุปเนื้อหาทั้ง 8 บทแบบอ่านง่าย แต่ละบทมีเป้าหมาย คำถามหลัก แนวคิดสำคัญ แผนภาพ คำสั่งที่ใช้จริง และคำถามทบทวนท้ายบท ศัพท์เทคนิคคงเป็นภาษาอังกฤษไว้ เพราะเป็นคำที่จะเจอในเครื่องมือจริง</p>
+
+      <div class="pipeline" aria-label="ลำดับบทเรียน">
+        <span class="step"><b>1</b>โครงสร้าง repo</span><span class="arrow">→</span>
+        <span class="step"><b>2</b>จัดการ context</span><span class="arrow">→</span>
+        <span class="step"><b>3</b>ล้างค่า agent</span><span class="arrow">→</span>
+        <span class="step"><b>4</b>TOR → tickets</span><span class="arrow">→</span>
+        <span class="step"><b>5</b>Hook กันพัง</span><span class="arrow">+</span>
+        <span class="step"><b>6</b>Subagents</span><span class="arrow">→</span>
+        <span class="step"><b>7</b>ลงมือเขียนโค้ด</span><span class="arrow">→</span>
+        <span class="step"><b>8</b>AI รีวิว PR</span>
+      </div>
+      <p class="phase-note">บท 1–3 คือการเตรียมพื้นที่ บท 4 วางแผนงาน บท 5–6 เตรียม agent ให้ปลอดภัย บท 7–8 คือการลงมือทำและตรวจงาน</p>
+    </header>
+
+    <aside class="glossary" aria-labelledby="gl">
+      <h2 id="gl">อภิธานศัพท์ที่ใช้ตลอดคอร์ส</h2>
+      <dl>
+        <div><dt>context window</dt><dd>พื้นที่ความจำของโมเดลในหนึ่งคำตอบ นับเป็น token (ประมาณ 4 ตัวอักษรอังกฤษต่อ token)</dd></div>
+        <div><dt>smart zone / dumb zone</dt><dd>ช่วงต้นของ context ที่โมเดลทำงานได้ดี กับช่วงหลังที่คุณภาพตกลงเรื่อยๆ</dd></div>
+        <div><dt>AGENTS.md</dt><dd>ไฟล์คำสั่งของโปรเจกต์ที่ agent โหลดทุกครั้ง ใส่เฉพาะ "กฎ" สั้นๆ</dd></div>
+        <div><dt>skill</dt><dd>โฟลเดอร์ที่มี <code>SKILL.md</code> เก็บ "สูตร" ยาวๆ โหลดเมื่อจำเป็นเท่านั้น</dd></div>
+        <div><dt>vertical slice</dt><dd>งานชิ้นบางๆ ที่ตัดผ่านทุกชั้น (DB, API, UI, test) และเดโมได้จริง</dd></div>
+        <div><dt>hook</dt><dd>สคริปต์ที่ harness รันตามจังหวะที่กำหนด เช่น ก่อนรันคำสั่ง shell และสั่งห้ามได้</dd></div>
+        <div><dt>subagent</dt><dd>agent ตัวที่สองที่มี context window ของตัวเอง รับ brief ไปทำแล้วส่งรายงานกลับ</dd></div>
+        <div><dt>seam</dt><dd>จุดที่ใช้ทดสอบฟีเจอร์ เช่น contract test, controller spec, component test</dd></div>
+        <div><dt>frontier</dt><dd>ticket ที่ยังเปิดอยู่และไม่มีตัวบล็อกค้าง คือ "งานที่หยิบทำได้ตอนนี้"</dd></div>
+        <div><dt>TDD (red → green)</dt><dd>เขียน test ที่ fail ก่อน แล้วเขียนโค้ดน้อยที่สุดให้ผ่าน ทีละชิ้น</dd></div>
+      </dl>
+    </aside>
+
+    <!-- ===================== LESSON 1 ===================== -->
+    <section class="lesson" id="l1">
+      <div class="ticket-strip"><span class="id">LESSON 01</span><span>⏱ 10–15 นาที</span></div>
+      <div class="lesson-head">
+        <div>
+          <h2>Monorepo, Turborepo และการเขียนโค้ดด้วย AI</h2>
+          <div class="src">ต้นฉบับ: <a href="01-monorepo-and-turborepo.md">01-monorepo-and-turborepo.md</a></div>
+        </div>
+        <label class="donebox"><input type="checkbox" id="done-l1" data-l="l1">อ่านจบแล้ว</label>
+      </div>
+      <div class="goal"><strong>เป้าหมาย:</strong> เข้าใจว่า repo นี้จัดโครงสร้างอย่างไร ทำไมจัดแบบนั้น และทำไมโครงสร้างนี้ช่วยให้ AI agent ทำงานได้ดีขึ้น</div>
+      <ol class="questions">
+        <li><span>Monorepo คืออะไร ต่างจาก polyrepo อย่างไร</span></li>
+        <li><span>Turborepo เพิ่มอะไรให้ monorepo และทำไมเลือกใช้</span></li>
+        <li><span>โครงสร้างนี้ช่วยอะไรเมื่อให้ AI agent สร้างฟีเจอร์</span></li>
+      </ol>
+
+      <h3>Monorepo คืออะไร</h3>
+      <ul class="points">
+        <li><b>Monorepo</b> คือ Git repo เดียวที่มีหลายโปรเจกต์อยู่ด้วยกัน ในเวิร์กช็อปนี้ frontend, backend, API contract และ database schema อยู่ใน repo เดียว</li>
+        <li><b>Polyrepo</b> คือแยก repo ละโปรเจกต์ โค้ดที่ใช้ร่วมกันต้อง publish เป็น package แล้วแต่ละ repo ค่อย install ทำให้เวอร์ชันไม่ตรงกันได้ง่าย</li>
+        <li>Monorepo <b>ไม่ใช่</b> monolith: <code>apps/web</code> กับ <code>apps/api</code> ยังเป็นสองแอปที่ build และ deploy แยกกัน แค่อยู่ repo เดียวกัน</li>
+        <li><b>pnpm workspaces</b> ทำให้ทุกโฟลเดอร์ใน <code>apps/</code> และ <code>packages/</code> เป็น package แยก และอ้างถึงกันด้วย <code>"workspace:*"</code> โดยไม่ต้อง publish</li>
+        <li>หัวใจคือ <code>@erp/contracts</code> ที่อธิบายทุก endpoint ไว้ที่เดียว ทั้ง API และ web ใช้ package นี้ จึงไม่มีทางเข้าใจ API ไม่ตรงกัน</li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/polyrepo-vs-monorepo.svg" alt="เปรียบเทียบ polyrepo กับ monorepo" loading="lazy"></div>
+        <figcaption><b>Polyrepo vs Monorepo:</b> polyrepo ต้อง publish contract ไปที่ registry และแต่ละแอปอาจใช้คนละเวอร์ชัน ส่วน monorepo ใช้ contract ในเครื่องผ่าน workspace link เสมอ</figcaption>
+      </figure>
+
+      <h3>Turborepo เพิ่มอะไรให้</h3>
+      <ul class="points">
+        <li><b>Task graph:</b> ใน <code>turbo.json</code> เขียน <code>"dependsOn": ["^build"]</code> แปลว่า "ก่อน build package นี้ ให้ build ทุก package ที่มันพึ่งพาก่อน" Turborepo จัดลำดับและรันงานที่ไม่เกี่ยวกันพร้อมกันให้เอง</li>
+        <li><b>Caching:</b> คำนวณ hash จากไฟล์และ config ถ้าเคยเห็น hash นี้แล้วจะดึงผลลัพธ์เก่ามาใช้เลย build รอบสองที่ไม่มีอะไรเปลี่ยนเสร็จในไม่ถึงครึ่งวินาที</li>
+        <li><b>--filter:</b> รันเฉพาะ package ที่สนใจ แต่ยัง build dependency ให้ก่อน ผลจึงถูกต้องและเร็ว</li>
+        <li>เลือก Turborepo เพราะเป็น <b>ชั้นบางๆ</b>: แต่ละ package ยังใช้ script ปกติ config ทั้งหมดราว 40 บรรทัด ถ้าถอดออก ทุก package ยัง build ได้เอง</li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/turborepo-task-graph.svg" alt="Task graph ของ Turborepo" loading="lazy"></div>
+        <figcaption><b>Task graph:</b> database generate ก่อน database build, API build รอทั้ง database และ contracts, web build รอแค่ contracts งานที่ไม่ขึ้นต่อกันรันขนานกันได้</figcaption>
+      </figure>
+
+      <h3>ทำไมช่วย AI coding</h3>
+      <ul class="points">
+        <li><b>ฟีเจอร์ทั้งก้อนอยู่ที่เดียว:</b> schema, contract, API handler และ UI อยู่ใน checkout เดียว agent อ่านของจริงแทนการเดา</li>
+        <li><b>Vertical slices:</b> ทำงานเป็นชิ้นบางที่ตัดผ่านทุกชั้น ปัญหาการต่อกันโผล่ตั้งแต่เฟสแรก ทุกเฟสรันและทดสอบได้ และแต่ละชิ้นเล็กพอให้ agent ถือ context ไหว</li>
+        <li><b>Compiler ช่วยรีวิว:</b> type ทั้งหมดมาจาก contract ถ้า agent เปลี่ยนชื่อ field จุดที่ไม่ตรงจะกลายเป็น type error พร้อมไฟล์และบรรทัด agent แก้ error ที่มองเห็นได้เก่งกว่าหาบั๊กที่ไม่มีใครรายงาน</li>
+        <li><b>คำสั่งเดียวเช็คทุกอย่าง:</b> <code>pnpm check</code> (lint + typecheck + test + build) เร็วเพราะ cache</li>
+        <li><b>คำสั่งแบบเป็นชั้น:</b> <code>AGENTS.md</code> ที่ root เป็นกฎกลาง ส่วน <code>apps/api</code> และ <code>apps/web</code> มีกฎเฉพาะ stack ของตัวเอง</li>
+        <li><b>ระวัง:</b> อย่าให้ agent อ่านทั้ง repo, อย่าแก้ไฟล์ที่ generate (<code>dist/</code>, Prisma client) และอย่าทำ diff ใหญ่เกินไป</li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/ai-vertical-slices.svg" alt="Horizontal phases เทียบกับ vertical slices" loading="lazy"></div>
+        <figcaption><b>Horizontal vs Vertical:</b> แบบแนวนอนทำทีละชั้นแล้วค่อยมาต่อกันตอนท้าย แบบแนวตั้งส่งมอบ list, create, edit ลูกค้าทีละชิ้น แต่ละเฟสผ่านครบทั้ง 4 ชั้นและจบด้วยการตรวจสอบ</figcaption>
+      </figure>
+
+      <pre><code>pnpm check                                <span class="cmt"># lint + typecheck + test + build ทุก package</span>
+pnpm turbo run test --filter=@erp/api     <span class="cmt"># test เฉพาะ api (dependency ยัง build ก่อน)</span>
+pnpm turbo run build                      <span class="cmt"># รันสองครั้ง รอบสองแทบทั้งหมดมาจาก cache</span></code></pre>
+
+      <div class="summary">
+        <h3>สรุปบทที่ 1</h3>
+        <ul class="points">
+          <li>Monorepo เก็บโปรเจกต์ที่เกี่ยวข้องไว้ repo เดียว ใช้โค้ดร่วมกันได้ทันที และหนึ่ง commit แก้ได้ทุกชั้น</li>
+          <li>Turborepo เพิ่ม task graph และ cache ให้ pnpm workspaces โดยแทบไม่ต้อง config</li>
+          <li>สำหรับ AI: เห็นฟีเจอร์ครบ, ทำเป็น vertical slice, ได้ type error เป็น feedback, มีคำสั่งเดียวตรวจงาน และมีคำสั่งแยกตาม stack</li>
+        </ul>
+      </div>
+      <div class="quiz">
+        <details><summary>ถ้า agent รัน <code>tsc</code> ตรงๆ ใน <code>apps/web</code> หลังแก้ contract จะเกิดอะไร</summary><div class="ans">มันจะ type-check กับ build เก่าของ contract และได้ผลที่สับสน ควรรันผ่าน Turborepo (<code>pnpm check</code>) เพราะ <code>^build</code> จะ build dependency ใหม่ก่อน</div></details>
+        <details><summary>ทำไม vertical slice เหมาะกับ monorepo</summary><div class="ans">หนึ่ง slice แตะ schema, contract, API และ UI ใน monorepo คือ branch เดียว diff เดียว และ <code>pnpm check</code> ครั้งเดียว ส่วน polyrepo ต้องเปิด 3 PR และ publish contract ใหม่</div></details>
+      </div>
+    </section>
+
+    <!-- ===================== LESSON 2 ===================== -->
+    <section class="lesson" id="l2">
+      <div class="ticket-strip"><span class="id">LESSON 02</span><span>⏱ 10–15 นาที</span></div>
+      <div class="lesson-head">
+        <div>
+          <h2>Context engineering: อะไรควรอยู่ใน AGENTS.md และอะไรควรเป็น skill</h2>
+          <div class="src">ต้นฉบับ: <a href="02-context-engineering-agents-md-and-skills.md">02-context-engineering-agents-md-and-skills.md</a></div>
+        </div>
+        <label class="donebox"><input type="checkbox" id="done-l2" data-l="l2">อ่านจบแล้ว</label>
+      </div>
+      <div class="goal"><strong>เป้าหมาย:</strong> เข้าใจว่าทำไมไฟล์คำสั่งใน repo นี้ตั้งใจเขียนให้สั้น ทำไมสูตรยาวๆ ถูกย้ายไปเป็น skill และตัดสินใจเองได้ว่าเนื้อหาไหนควรอยู่ที่ไหน</div>
+      <ol class="questions">
+        <li><span>agent "มองเห็น" อะไรบ้างระหว่าง session และทำไมพื้นที่นั้นถึงเป็นงบประมาณ</span></li>
+        <li><span>"dumb zone" คืออะไร ทำไมเริ่มก่อน context เต็มนาน</span></li>
+        <li><span>เนื้อหาหนึ่งย่อหน้าควรอยู่ใน <code>AGENTS.md</code>, skill หรือลบทิ้ง</span></li>
+      </ol>
+
+      <h3>Context window คืองบประมาณ</h3>
+      <ul class="points">
+        <li><b>ต้นทุนคงที่ (จ่ายทุก session):</b> system prompt, นิยาม tool, ไฟล์คำสั่ง (<code>AGENTS.md</code>/<code>CLAUDE.md</code>) และชื่อกับคำอธิบายของทุก skill</li>
+        <li><b>ต้นทุนผันแปร (โตขึ้นเรื่อยๆ):</b> ไฟล์ที่อ่าน, log ของ build และ test, บทสนทนา ซึ่งค้างอยู่จนกว่าจะ clear หรือ compact</li>
+        <li>ใน Claude Code ดูสัดส่วนได้ด้วย <code>/context</code> คำถามที่ดีคือ "ตอนนี้ context ส่วนไหนทำงานมีประโยชน์จริง"</li>
+      </ul>
+
+      <h3>Dumb zone</h3>
+      <ul class="points">
+        <li>ความสามารถของโมเดลลดลงเมื่อ context ยาวขึ้น และลดตั้งแต่ก่อนเต็มนาน</li>
+        <li><b>Context rot:</b> งานวิจัยของ Chroma (ก.ค. 2025) ทดสอบ 18 โมเดล ทุกตัวแย่ลงเมื่อ input ยาวขึ้น แม้งานจะง่ายเท่าเดิม</li>
+        <li><b>Lost in the middle:</b> โมเดลจำต้นและท้าย prompt ได้ดี แต่จำตรงกลางได้แย่ ไฟล์คำสั่งที่โหลดก่อนจะถูกดันไปอยู่ตรงกลางเรื่อยๆ</li>
+        <li>กฎคร่าวๆ: พยายามใช้ context ราว 40–60% ถ้าเป็นโมเดล 200K ที่ 150K token ถือว่าอยู่ใน dumb zone แน่นอนแล้ว</li>
+        <li><b>อาการ:</b> ลืมกฎที่เคยทำตาม, เสนอวิธีแก้ที่ลองไปแล้ว, เอารายละเอียดจากงานก่อนมาปน, ตอบผิดอย่างมั่นใจ วิธีแก้คือลด context ไม่ใช่เขียน prompt ให้ดีขึ้น</li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/smart-zone-dumb-zone.svg" alt="กราฟคุณภาพเทียบกับปริมาณ context" loading="lazy"></div>
+        <figcaption><b>Smart zone / Dumb zone:</b> คุณภาพคงที่ช่วงแรกถึงราว 40% จากนั้นค่อยๆ ลด และดิ่งลงชัดเจนเมื่อเกินราว 150K token กลไกหลักคือ context rot, lost in the middle และตัวหลอก (distractor)</figcaption>
+      </figure>
+      <div class="callout"><strong>ทำไมเกี่ยวกับไฟล์คำสั่ง:</strong> <code>AGENTS.md</code> ยาว 300 บรรทัดเสียสามต่อ คือกินงบตั้งแต่ต้น, ถูกดันไปอยู่ตรงกลางที่โมเดลอ่านแย่ที่สุด และกฎที่ไม่เกี่ยวกับงานตอนนั้นกลายเป็นตัวหลอก <b>กฎยิ่งยาว agent ยิ่งทำตามได้น้อยลง</b></div>
+
+      <h3>กฎ (always on) กับ สูตร (on demand)</h3>
+      <ul class="points">
+        <li><b>กฎ</b> สั้น ใช้กับเกือบทุกงาน และพลาดแน่ถ้าไม่รู้ เช่น "relative import ต้องลงท้าย <code>.js</code>", "ห้ามเขียน API type เอง ให้ derive จาก contract" ใส่ใน <code>AGENTS.md</code></li>
+        <li><b>สูตร</b> ยาว ใช้กับงานประเภทเดียว เช่น ขั้นตอนเพิ่มฟีเจอร์ 6 ขั้น, template ของ test ใส่เป็น <b>skill</b></li>
+        <li><b>Progressive disclosure:</b> ตอนเริ่ม session agent โหลดแค่ชื่อและคำอธิบาย skill บรรทัดเดียว เมื่องานตรงกับคำอธิบายจึงอ่านเนื้อหาเต็ม คำอธิบายจึงต้องบอกทั้ง "มีอะไร" และ "ใช้เมื่อไหร่"</li>
+        <li>Skill เป็น format เปิด ใช้ได้ทั้ง Claude Code, Codex, Cursor และ Kiro เก็บจริงที่ <code>.agents/skills/</code> แล้ว symlink ไปโฟลเดอร์ของแต่ละเครื่องมือ</li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/sorting-rule.svg" alt="ผังตัดสินใจว่าเนื้อหาควรอยู่ที่ไหน" loading="lazy"></div>
+        <figcaption><b>กฎการคัดแยก (หยุดที่ "ใช่" ข้อแรก):</b> (1) ถ้าไม่มีสิ่งนี้ agent จะพลาดในงานทั่วไปไหม → <code>AGENTS.md</code> (2) ใช้แค่กับงานประเภทเดียวไหม → skill (3) agent หาเองได้จากโค้ดหรือ config ไหม → ลบทิ้ง ถ้าไม่ใช่ทั้งหมด → เก็บไว้ใน <code>README.md</code> สำหรับคน</figcaption>
+      </figure>
+
+      <h3>ผลที่เกิดใน repo นี้</h3>
+      <p>ไฟล์ <code>AGENTS.md</code> สามไฟล์ลดจาก 52/24/26 บรรทัด (ราว 1,800 token) เหลือ 34/10/9 บรรทัด (ราว 1,000 token) และได้ skill สามตัว (<code>add-feature</code>, <code>write-tests</code>, <code>repo-commands</code>) ราว 2,900 token ที่โหลดเมื่อจำเป็น ต้นทุนคงที่ลดลงครึ่งหนึ่ง แต่ความรู้ที่ agent เข้าถึงได้ <b>เพิ่มขึ้น</b> เพราะ skill ใส่ template เต็มได้ ส่วนที่ลบทิ้ง เช่น การตั้งค่า Prettier (มี <code>.prettierrc</code> อยู่แล้ว) และกฎที่ซ้ำกันในหลายไฟล์</p>
+
+      <h3>วิธีอื่นที่ช่วยได้</h3>
+      <ul class="points">
+        <li><b>เริ่มใหม่ระหว่างงาน:</b> <code>/clear</code> ทิ้งบทสนทนาแต่เก็บต้นทุนคงที่ไว้</li>
+        <li><b>Compact อย่างตั้งใจ:</b> ให้ agent เขียนสิ่งที่เรียนรู้ลงไฟล์ แล้ว clear และทำต่อจากไฟล์นั้น</li>
+        <li><b>ส่งงานสำรวจให้ subagent:</b> อ่าน 20 ไฟล์แล้วส่งกลับแค่ 3 ประโยค (บทที่ 6)</li>
+        <li><b>ใช้การตรวจแบบ deterministic:</b> type error ไม่กี่บรรทัดดีกว่าสั่งให้ "ไล่หาจุดที่ไม่ตรงกัน"</li>
+        <li><b>นับจำนวน tool:</b> MCP server แต่ละตัวโหลดนิยาม tool ทั้งหมดตอนเริ่ม 5 server อาจกินมากกว่าไฟล์คำสั่งทั้ง repo</li>
+      </ul>
+
+      <div class="summary">
+        <h3>สรุปบทที่ 2</h3>
+        <ul class="points">
+          <li>Context window คืองบประมาณ มีทั้งต้นทุนคงที่และต้นทุนที่โตขึ้นตลอด session</li>
+          <li>โมเดลแย่ลงก่อน context เต็มนาน smart zone อยู่ราว 40% แรก ที่ 150K บนโมเดล 200K คือ dumb zone</li>
+          <li>กฎสั้นใส่ <code>AGENTS.md</code>, สูตรยาวใส่ skill, อะไรที่ agent หาเองได้ให้ลบ</li>
+        </ul>
+      </div>
+      <div class="quiz">
+        <details><summary>"ใช้ single quote, trailing comma, กว้าง 100" ควรอยู่ที่ไหน</summary><div class="ans">ลบทิ้ง เพราะ <code>.prettierrc</code> คือแหล่งความจริงอยู่แล้ว และ <code>pnpm format</code> จัดให้เอง เขียนซ้ำในไฟล์คำสั่งเป็นต้นทุนเปล่า</div></details>
+        <details><summary>ทำไมคำอธิบาย skill "Testing notes" ถึงไม่ดี</summary><div class="ans">คลุมเครือ agent ตัดสินจากคำอธิบายบรรทัดเดียว จึงอาจไม่เคยโหลดเลยหรือโหลดทุกงาน ควรเขียนให้บอกว่ามีอะไรและใช้เมื่อไหร่ เช่น "วิธีเขียนและรัน <code>*.spec.ts</code> และ <code>*.test.tsx</code> ใช้เมื่อเพิ่มหรือแก้ test"</div></details>
+      </div>
+    </section>
+
+    <!-- ===================== LESSON 3 ===================== -->
+    <section class="lesson" id="l3">
+      <div class="ticket-strip"><span class="id">LESSON 03</span><span>⏱ 15–20 นาที</span></div>
+      <div class="lesson-head">
+        <div>
+          <h2>เริ่มต้นให้สะอาด: รีเซ็ต agent, ล็อกค่าโปรเจกต์, ปิด memory</h2>
+          <div class="src">ต้นฉบับ: <a href="03-clean-agent-setup.md">03-clean-agent-setup.md</a></div>
+        </div>
+        <label class="donebox"><input type="checkbox" id="done-l3" data-l="l3">อ่านจบแล้ว</label>
+      </div>
+      <div class="goal"><strong>เป้าหมาย:</strong> ให้ทุกคนในห้องใช้ agent แบบเดียวกันบน repo เดียวกัน โดยไม่มีอะไรถูกโหลดที่มองไม่เห็นใน git</div>
+      <ol class="questions">
+        <li><span>config ของ agent มาจากไหน และทำไมการตั้งค่าส่วนตัวถึงเปลี่ยนพฤติกรรมใน repo นี้</span></li>
+        <li><span>รีเซ็ต agent ให้เหมือนติดตั้งใหม่โดยไม่เสียอะไรและไม่ต้อง sign out ได้อย่างไร</span></li>
+        <li><span>ทำไมต้องปิด memory อัตโนมัติ และใช้อะไรแทน</span></li>
+      </ol>
+
+      <h3>Config สามชั้น</h3>
+      <ul class="points">
+        <li><b>Global config</b> (ใน home directory): settings, ไฟล์คำสั่งส่วนตัว, skill, MCP server, plugin, hook ของแต่ละคน โหลดในทุกโปรเจกต์</li>
+        <li><b>Project config</b> (ใน repo): <code>AGENTS.md</code>, skill ใน <code>.agents/skills/</code> และ project settings ถูก commit จึงเหมือนกันทุกคน</li>
+        <li><b>Memory:</b> โน้ตที่ agent เขียนไว้เองจาก session ก่อนแล้วโหลดกลับมา</li>
+        <li>มีแค่ชั้นกลางที่เหมือนกันทุกเครื่อง ตัวอย่างปัญหา: คนหนึ่งมี GitHub MCP 40 tool, อีกคนมีคำสั่งส่วนตัวว่า "ใช้ npm เสมอ" (repo นี้ใช้ pnpm), อีกคนมี memory จากโปรเจกต์อื่น ผลคือพิมพ์ prompt เดียวกันแต่ได้ผลต่างกัน</li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/agent-config-layers.svg" alt="config สามชั้นก่อนและหลังบทเรียน" loading="lazy"></div>
+        <figcaption><b>สามชั้นและสามขั้นตอน:</b> Global config ถูกรีเซ็ตเป็นค่าเริ่มต้น (ขั้น 1), Project config เพิ่มไฟล์ settings ที่ปิดสิ่งที่ไม่จำเป็น (ขั้น 2), Memory ถูกปิดและใช้ handoff file แทน (ขั้น 3)</figcaption>
+      </figure>
+
+      <h3>ขั้นที่ 1: รีเซ็ต global config</h3>
+      <p>ใช้ prompt ให้ agent ทำเองในแต่ละเครื่องมือ เพราะไม่มีใครจำได้ว่า config อยู่ตรงไหนบ้าง และตำแหน่งเปลี่ยนทุก release ขั้นตอนคือ <b>Inventory</b> (ค้นจากเอกสารของตัวเองทุกตำแหน่ง) → <b>Back up</b> (ย้ายไป <code>~/agent-config-backup-&lt;วันที่&gt;/</code> โดยคง path เดิม) → เขียน <b>RESTORE.md</b> → <b>Verify</b></p>
+      <ul class="points">
+        <li>"ค้นจากเอกสารของตัวเอง" เพราะตำแหน่ง config เปลี่ยนตามเวอร์ชัน คำตอบจาก training data จะตกหล่นของใหม่</li>
+        <li><b>ย้าย ไม่ลบ</b> และตรวจทุกครั้งที่ย้าย เพราะ backup คือสำเนาเดียวที่เหลือ</li>
+        <li><code>RESTORE.md</code> ต้องเขียนให้ agent ที่ไม่มีความจำเรื่องนี้กู้คืนได้จากไฟล์นี้อย่างเดียว</li>
+        <li><b>ห้ามย้ายไฟล์ที่ git track อยู่</b> (เช่น <code>AGENTS.md</code>, <code>.claude/skills/</code>) เพราะเป็น config ของทีม ย้ายเฉพาะไฟล์ส่วนตัวที่ไม่ได้ track</li>
+        <li>เก็บไฟล์ login/credential ไว้ที่เดิม และอย่ารันในโหมด auto-approve</li>
+      </ul>
+      <pre><code>Restore my agent configuration from ~/agent-config-backup-&lt;date&gt;/RESTORE.md   <span class="cmt"># กู้คืนหลังจบเวิร์กช็อป</span></code></pre>
+
+      <h3>ขั้นที่ 2: ให้โปรเจกต์ตัดสินว่าโหลดอะไร</h3>
+      <ul class="points">
+        <li><b>เปิดไว้:</b> ไฟล์คำสั่ง, skill ใน repo และ tool พื้นฐาน (อ่าน/แก้ไฟล์, รันคำสั่ง, subagent, ค้นเว็บ)</li>
+        <li><b>ปิด:</b> MCP server, plugin, hook, connector, computer use, image generation, output style ส่วนตัว, knowledge base และ memory</li>
+        <li>prompt ย้ำสามจุด: <b>ห้ามเดา key</b> (key ที่แต่งขึ้นจะถูกเพิกเฉยเงียบๆ), <b>ห้ามแตะ</b> model/auth/approval/telemetry (เป็นเรื่องส่วนตัว), และ <b>รายงานสิ่งที่ปิดจากโปรเจกต์ไม่ได้</b></li>
+      </ul>
+      <div class="tablewrap"><table>
+        <tr><th>เครื่องมือ</th><th>ไฟล์ที่ได้</th><th>หมายเหตุ</th></tr>
+        <tr><td>Claude Code</td><td><code>.claude/settings.json</code></td><td><code>autoMemoryEnabled: false</code>, <code>disableAllHooks: true</code>, <code>enableAllProjectMcpServers: false</code></td></tr>
+        <tr><td>Codex</td><td><code>.codex/config.toml</code></td><td>ปิด memories, apps, plugins, hooks ฯลฯ มีผลหลัง trust โปรเจกต์แล้วเท่านั้น</td></tr>
+        <tr><td>Kiro</td><td><code>.kiro/agents/erp.json</code> + <code>.kiro/settings/cli.json</code></td><td>ใช้ custom agent ชื่อ <code>erp</code> ที่มีแค่ <code>@builtin</code> tools และตั้งเป็น default agent</td></tr>
+      </table></div>
+      <p>ไม่มีเครื่องมือไหนให้โปรเจกต์ปิดได้ทุกอย่าง เช่น MCP server ระดับ user ของ Claude Code ปิดจากโปรเจกต์ไม่ได้ นี่คือเหตุผลที่ต้องทำขั้นที่ 1 ก่อน</p>
+
+      <h3>ขั้นที่ 3: ปิด memory อัตโนมัติ</h3>
+      <ul class="points">
+        <li>เหตุผลสี่ข้อ: เป็น <b>context ที่มองไม่เห็น</b> (ไม่อยู่ใน git), <b>ล้าสมัยได้</b> (และ agent เชื่อเพราะเขียนเอง), <b>แชร์ไม่ได้</b>, และ <b>ทำให้ไม่รู้ว่าอะไรเปลี่ยนพฤติกรรม agent</b></li>
+        <li>Kiro ปิด memory จาก repo ไม่ได้ ทุกคนต้องปิดเองหนึ่งครั้ง</li>
+        <li>สิ่งที่ใช้แทนคือ <b>handoff file:</b> ตอนจบ session ให้ agent เขียนว่าทำอะไรไปแล้ว เหลืออะไร ตัดสินใจอะไรไว้ ลงไฟล์ markdown ใน repo แล้ว session ถัดไปชี้ไปที่ไฟล์นั้น</li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/memory-vs-handoff.svg" alt="เปรียบเทียบ auto memory กับ handoff file" loading="lazy"></div>
+        <figcaption><b>Auto memory vs Handoff file:</b> memory ให้ agent เลือกเองว่าจะเก็บอะไร อยู่นอก git ไม่มีใครรีวิว โหลดทุกครั้งแม้ล้าสมัย ส่วน handoff file คุณสั่งให้เขียน อยู่ใน repo อ่านและแก้ได้ โหลดเมื่อชี้ไปเท่านั้น และใครก็ทำงานต่อได้</figcaption>
+      </figure>
+      <pre><code><span class="cmt"># Claude Code</span>
+/status    /memory    /context    /mcp
+<span class="cmt"># Codex</span>
+codex features list
+<span class="cmt"># Kiro CLI</span>
+/context show    /memories</code></pre>
+
+      <div class="summary">
+        <h3>สรุปบทที่ 3</h3>
+        <ul class="points">
+          <li>agent โหลด config สามชั้น มีแค่ project config ที่อยู่ใน git และเหมือนกันทุกคน</li>
+          <li><b>รีเซ็ต</b> global ด้วย prompt ที่ backup และเขียน RESTORE.md, <b>ล็อก</b> project settings ด้วย prompt เดียวกันทุกเครื่องมือ, <b>ปิด</b> memory แล้วใช้ handoff file</li>
+        </ul>
+      </div>
+      <div class="quiz">
+        <details><summary>ทำไม prompt รีเซ็ตต้องมีบรรทัดเรื่องไฟล์ที่ git track</summary><div class="ans">ไม่อย่างนั้น agent ที่ละเอียดจะเจอ <code>AGENTS.md</code>, <code>.claude/skills/</code> แล้วย้ายออกไปด้วย ทำให้เวิร์กช็อปพัง ไฟล์ที่ track เป็นของทีม ไฟล์ที่ไม่ track (เช่น <code>settings.local.json</code>) เป็นของเรา</div></details>
+        <details><summary>ทำไม "never guess a key" สำคัญ</summary><div class="ans">เครื่องมือส่วนใหญ่เพิกเฉยต่อ key ที่ไม่รู้จัก key ที่แต่งขึ้นจะล้มเหลวเงียบๆ ทำให้เราเข้าใจผิดว่าปิดไปแล้ว</div></details>
+      </div>
+    </section>
+
+    <!-- ===================== LESSON 4 ===================== -->
+    <section class="lesson" id="l4">
+      <div class="ticket-strip"><span class="id">LESSON 04</span><span>⏱ 45–60 นาที</span></div>
+      <div class="lesson-head">
+        <div>
+          <h2>จาก TOR สู่ tickets: grill, spec, tickets</h2>
+          <div class="src">ต้นฉบับ: <a href="04-from-tor-to-tickets.md">04-from-tor-to-tickets.md</a></div>
+        </div>
+        <label class="donebox"><input type="checkbox" id="done-l4" data-l="l4">อ่านจบแล้ว</label>
+      </div>
+      <div class="goal"><strong>เป้าหมาย:</strong> เปลี่ยน TOR ของ RetailOne ให้เป็น spec และ GitHub issues ที่ agent หยิบไปทำได้ทีละชิ้น โดยใช้ skill สามตัว และทุกอย่างมองเห็นได้ใน git</div>
+      <ol class="questions">
+        <li><span>ทำไมไม่ส่ง TOR ให้ agent แล้วบอกว่า "สร้างเลย"</span></li>
+        <li><span>skill แต่ละตัวผลิตอะไร และผลลัพธ์ไปอยู่ที่ไหน</span></li>
+        <li><span>ดูอย่างไรว่า spec และการแตก ticket ดีหรือแย่</span></li>
+      </ol>
+
+      <h3>ทำไมไม่แปะ TOR แล้วสั่งสร้าง</h3>
+      <ul class="points">
+        <li><b>มีเรื่องที่ยังไม่มีใครตัดสินใจ:</b> คำถามเปิด 5 ข้อ, หน้าจอต้องเป็นภาษาไทยแต่แอปเป็นอังกฤษ, TOR มี 4 role แต่ model มีแค่ <code>ADMIN</code>/<code>STAFF</code> agent จะตัดสินเองเงียบๆ และต่างกันทุกเครื่อง</li>
+        <li><b>ใหญ่เกิน context window เดียว:</b> ต้องหั่นเป็นชิ้นที่พอดีกับ window ใหม่</li>
+        <li><b>งานมีลำดับ:</b> รับสินค้าไม่ได้ถ้ายังไม่มีใบสั่งซื้อ สร้างใบสั่งซื้อไม่ได้ถ้าไม่มี supplier</li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/tor-to-tickets-flow.svg" alt="สามขั้น grill spec tickets" loading="lazy"></div>
+        <figcaption><b>สามขั้นตอน:</b> <b>Grill</b> (<code>grill-me</code>) สัมภาษณ์คุณเป็นรอบจนทุกการตัดสินใจชัด และไม่เขียนอะไร → <b>Spec</b> (<code>to-spec</code>) เปลี่ยนบทสนทนาเป็น spec หนึ่ง GitHub issue → <b>Tickets</b> (<code>to-tickets</code>) แตก spec เป็น vertical-slice ticket ที่ระบุตัวบล็อก ให้คุณอนุมัติก่อน publish เป็น sub-issue พร้อม label <code>ready-for-agent</code></figcaption>
+      </figure>
+      <div class="callout"><strong>กฎของทั้งบท:</strong> ทำทั้งสามขั้นใน <b>บทสนทนาเดียว</b> ห้าม <code>/clear</code> ระหว่างทาง จุดเดียวที่ <code>/compact</code> ได้อย่างปลอดภัยคือหลังจาก spec ขึ้น GitHub แล้ว</div>
+
+      <h3>เตรียมตัว</h3>
+      <pre><code>gh repo fork --remote                 <span class="cmt"># สร้าง fork ของตัวเอง (origin = fork, upstream = ต้นฉบับ)</span>
+gh repo edit --enable-issues          <span class="cmt"># fork ปิด Issues ไว้เป็นค่าเริ่มต้น</span>
+npx skills@latest add mattpocock/skills   <span class="cmt"># เลือก to-spec, to-tickets, setup-matt-pocock-skills, implement, tdd, code-review</span>
+/setup-matt-pocock-skills             <span class="cmt"># ตอบ: GitHub, Single-context, ใส่ใน AGENTS.md</span>
+gh label create ready-for-agent --color 0E8A16</code></pre>
+
+      <h3>ขั้นที่ 1: Grill</h3>
+      <ul class="points">
+        <li>เริ่มด้วย <code>/grill-me Read docs/tors/Retail_ERP_TOR_EN.md ...</code> agent จะอ่าน TOR, สำรวจโค้ด แล้วถามเป็นรอบ แต่ละคำถามมีคำตอบที่แนะนำ</li>
+        <li><b>ข้อเท็จจริงเป็นหน้าที่ agent การตัดสินใจเป็นหน้าที่คุณ</b> ถ้าถามว่า schema มีกี่ model ให้บอกไปหาเอง ถ้าถามว่าหน้าจอไทยอยู่ใน scope ไหม นั่นคือการตัดสินใจ</li>
+        <li>คำตอบที่แนะนำเป็นแค่ข้อเสนอ และขั้นนี้ <b>ไม่เขียนอะไรเลย</b></li>
+      </ul>
+
+      <h3>ขั้นที่ 2: Spec</h3>
+      <ul class="points">
+        <li><code>/to-spec</code> สังเคราะห์บทสนทนาเป็น spec (problem, solution, user stories, implementation decisions, testing decisions, out of scope) แล้ว publish เป็น issue เดียว</li>
+        <li>สิ่งที่ถามคือ <b>seams</b>: contract schema test, controller spec (stub <code>PrismaService</code>), React component test และ <b>ใหม่:</b> integration test กับ Postgres จริง สำหรับเรื่อง idempotency, concurrency และ "สต็อกห้ามติดลบ"</li>
+        <li>ตรวจ spec: ทุกการตัดสินใจมีคำตอบ, ตอบแต่ละเรื่องแค่ครั้งเดียว (Solution กับ Implementation Decisions ห้ามขัดกัน), ระบุว่า integration seam <b>ยังไม่มี</b>, และกฎที่ใช้ทั่วทั้งระบบ (pagination, error format, audit) เป็น "การตัดสินใจ" ไม่ใช่ "ฟีเจอร์"</li>
+      </ul>
+
+      <h3>ขั้นที่ 3: Tickets</h3>
+      <p>สั่ง <code>/to-tickets #&lt;เลข spec&gt;</code> พร้อมบล็อกกำหนดรูปร่าง ticket: 15–25 ticket แต่ละตัวเป็น vertical slice มีบรรทัด <code>Covers:</code> (รหัส requirement จาก TOR), <code>Demo:</code> (สิ่งที่โชว์ได้เมื่อเสร็จ), <code>Seams:</code> (จุดทดสอบ) ห้ามมี ticket แบบ cross-cutting และให้แสดงรายการก่อน publish</p>
+      <figure>
+        <div class="frame"><img src="images/good-ticket.svg" alt="ticket ที่ไม่ดีเทียบกับ ticket ที่ดี" loading="lazy"></div>
+        <figcaption><b>ไม่ใช่ ticket vs ticket ที่ดี:</b> "Products: Prisma model และ migration" ทำแค่ชั้นเดียว เกณฑ์ผ่านอยู่แล้ววันนี้ และไม่มี Covers ส่วน "#15 สร้างและแก้ไข product โดยบังคับ SKU ไม่ซ้ำ" ครบทุกชั้น อ้าง MD-01, MD-02 และมีตัวบล็อกคือ #14 หลักตรวจสามข้อ: <b>แนวตั้ง, ตรวจย้อนได้, และเกณฑ์แต่ละข้อ fail ได้ในวันนี้</b></figcaption>
+      </figure>
+      <div class="tablewrap"><table>
+        <tr><th>สิ่งที่เห็นใน draft</th><th>ปัญหา</th><th>สิ่งที่ควรขอให้แก้</th></tr>
+        <tr><td>ticket ชื่อ "shared conventions", "infrastructure"</td><td>horizontal slice ไม่มีอะไรให้เดโม</td><td>สลายไปไว้ใน ticket แรกที่ต้องใช้</td></tr>
+        <tr><td>ticket "acceptance suite", "traceability"</td><td>หลาย ticket รวมกัน</td><td>ย้าย AC-xx ไปไว้ใน ticket ที่สร้างฟีเจอร์นั้น</td></tr>
+        <tr><td>วงจรใบสั่งซื้อทั้งหมดใน ticket เดียว</td><td>ใหญ่เกิน window เดียว</td><td>แบ่งตาม status หรือตาม guarantee</td></tr>
+        <tr><td>เกณฑ์เดียวกันอยู่สอง ticket</td><td>ตัวที่สองผ่านตั้งแต่ยังไม่เริ่ม</td><td>เก็บไว้ที่ ticket ที่สร้างพฤติกรรมนั้น</td></tr>
+        <tr><td>ไม่มี ticket ไหนพูดถึง Postgres test harness</td><td>integration seam จะถูก stub</td><td>เพิ่มเป็นเกณฑ์ของ ticket แรกที่เขียนสต็อก</td></tr>
+        <tr><td>น้อยกว่า 15 / มากกว่า 30 ticket</td><td>ชิ้นใหญ่ไป / จัดการ issue ไม่ไหว</td><td>แยกตัวที่ใหญ่สุด / รวมตัวที่มีชั้นเดียว</td></tr>
+      </table></div>
+      <figure>
+        <div class="frame"><img src="images/spec-and-ticket-tree.svg" alt="spec และ ticket เป็น sub-issue พร้อม dependency" loading="lazy"></div>
+        <figcaption><b>สิ่งที่ขึ้น GitHub:</b> spec หนึ่ง issue และ ticket เป็น sub-issue ลูกศรชี้จากตัวบล็อกไปยัง ticket ที่ถูกบล็อก คอลัมน์ซ้าย (roles และ seed data) ไม่มีตัวบล็อก จึงเป็น frontier ที่เริ่มทำได้ทันที</figcaption>
+      </figure>
+      <p>ตัวอย่างการตัดสินใจในห้องเรียน: release แรกครอบคลุม TOR ส่วน 4–6, UI เป็นภาษาอังกฤษ (หน้าจอไทยบันทึกเป็น deviation), เพิ่ม <code>role</code> 4 แบบบน <code>User</code>, อนุมัติโดย manager คนเดียว, ไม่ทำ reversal, หนึ่ง SKU หนึ่งหน่วย, load test NFR-05 เป็น ticket สุดท้ายที่ถูกบล็อกโดยทุก ticket</p>
+      <pre><code>gh issue list --label ready-for-agent --limit 50
+git add .kiro/skills skills-lock.json docs/agents AGENTS.md
+git commit -m "Install planning skills and configure the GitHub issue tracker" &amp;&amp; git push</code></pre>
+
+      <div class="summary">
+        <h3>สรุปบทที่ 4</h3>
+        <ul class="points">
+          <li>TOR เขียนเพื่อสัญญา ไม่ใช่เพื่อการสร้าง มีคำถามค้าง ใหญ่เกิน window เดียว และมีลำดับ</li>
+          <li><b>Grill</b> เปลี่ยนเอกสารเป็นการตัดสินใจ, <b>Spec</b> เขียนลง issue เดียว, <b>Tickets</b> แตกเป็น 15–25 vertical slice ที่มี Covers/Demo/Seams และตัวบล็อก</li>
+          <li>บทสนทนาเดียว compact ได้จุดเดียวคือหลัง spec ขึ้น GitHub และ commit ทุกอย่างเข้า repo</li>
+        </ul>
+      </div>
+      <div class="quiz">
+        <details><summary>เกณฑ์ "หน้า products โหลดได้" ใช้เป็น acceptance criterion ได้ไหม</summary><div class="ans">ไม่ได้ เพราะผ่านอยู่แล้ววันนี้ เกณฑ์ต้อง fail กับโค้ดปัจจุบัน เช่น "product ที่สองที่ใช้ SKU001 ถูกปฏิเสธพร้อมข้อความระบุ SKU"</div></details>
+        <details><summary>ทำไมห้าม compact ระหว่าง grill กับ spec</summary><div class="ans"><code>/to-spec</code> เขียน spec จากบทสนทนา สรุปของการตัดสินใจร้อยข้อไม่เท่ากับตัวการตัดสินใจจริง หลัง spec ขึ้น GitHub แล้วจึงไม่มีอะไรที่อยู่แค่ในบทสนทนา</div></details>
+      </div>
+    </section>
+
+    <!-- ===================== LESSON 5 ===================== -->
+    <section class="lesson" id="l5">
+      <div class="ticket-strip"><span class="id">LESSON 05</span><span>⏱ 15–20 นาที</span></div>
+      <div class="lesson-head">
+        <div>
+          <h2>Hooks: ด่านกั้นระหว่าง agent กับ shell</h2>
+          <div class="src">ต้นฉบับ: <a href="05-hooks-guard-the-shell.md">05-hooks-guard-the-shell.md</a></div>
+        </div>
+        <label class="donebox"><input type="checkbox" id="done-l5" data-l="l5">อ่านจบแล้ว</label>
+      </div>
+      <div class="goal"><strong>เป้าหมาย:</strong> ลงทะเบียน hook หนึ่งตัวที่โปรเจกต์เลือกและ commit ไว้ เพื่อกันไม่ให้ agent รันคำสั่งทำลายล้าง 4 แบบ ไม่ว่าจะใช้เครื่องมือไหน</div>
+      <ol class="questions">
+        <li><span>hook คืออะไร และทำอะไรได้ที่กฎใน <code>AGENTS.md</code> ทำไม่ได้</span></li>
+        <li><span>ทำไมบท 3 ปิด hook และทำไมบทนี้เปิดหนึ่งตัว</span></li>
+        <li><span>CI ครอบคลุมอะไรแล้ว และเหลืออะไรให้ hook ทำ</span></li>
+      </ol>
+
+      <h3>Hook คืออะไร</h3>
+      <ul class="points">
+        <li>hook คือคำสั่ง shell ที่ harness รันในจังหวะที่กำหนด ส่ง JSON เข้า stdin แล้วอ่าน exit code</li>
+        <li>มีหลายจังหวะ (<code>SessionStart</code>, <code>UserPromptSubmit</code>, <code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code>, <code>SessionEnd</code>) แต่ <b><code>PreToolUse</code> เป็นจังหวะเดียวที่ปฏิเสธการกระทำได้</b></li>
+        <li>hook <b>ไม่ใช่</b> โมเดลหรือ prompt แต่เป็นโปรแกรมที่รันทุกครั้ง agent ใน dumb zone อาจลืมกฎ "ห้าม reset database" แต่ hook ไม่ลืม</li>
+      </ul>
+      <div class="tablewrap"><table>
+        <tr><th>Exit code</th><th>สิ่งที่ harness ทำ</th></tr>
+        <tr><td><code>0</code></td><td>รันคำสั่งตามแผน</td></tr>
+        <tr><td><code>2</code></td><td>ไม่รัน และส่งข้อความ stderr กลับไปเป็นเหตุผลให้ agent</td></tr>
+        <tr><td>อื่นๆ</td><td>รันต่อและแสดง stderr เป็นคำเตือน (hook พัง = เปิดผ่าน ไม่ใช่ปิดกั้น)</td></tr>
+      </table></div>
+      <figure>
+        <div class="frame"><img src="images/hook-guard.svg" alt="ลำดับการทำงานของ guard hook" loading="lazy"></div>
+        <figcaption><b>Guard hook:</b> คุณพิมพ์ prompt → agent ตัดสินใจรันคำสั่ง → ก่อนรัน harness ส่ง JSON ให้สคริปต์ ถ้า exit 0 คำสั่งรัน ถ้า exit 2 คำสั่งไม่รันและ agent จะมาถามคุณ CI ตรวจ <b>ผลลัพธ์</b>หลัง push ส่วน hook ตรวจ <b>การกระทำ</b>ก่อนรัน</figcaption>
+      </figure>
+
+      <h3>CI ทำอะไรไม่ได้</h3>
+      <p>CI ตรวจ diff ที่ push ขึ้นไปหลังจากนั้นหลายนาที ไม่สามารถหยุดอะไรได้ ส่วนคำสั่งอย่าง <code>pnpm db:reset</code> (ลบทุกตาราง), <code>docker compose down -v</code> (ลบ volume ของ Postgres), <code>git push --force</code> (เขียนประวัติใหม่), <code>rm -rf</code> (ลบไฟล์ที่อาจยังไม่ commit) <b>ไม่ทิ้งร่องรอยใน diff</b> และ agent ที่ติดขัดมักหยิบมาใช้</p>
+
+      <h3>ทำไมบท 3 ปิดแต่บทนี้เปิด</h3>
+      <p>เรื่องของ <b>ที่มา (provenance)</b> hook ใน home directory รันในทุก repo โดยไม่มีใครเห็น ส่วน hook ในบทนี้อยู่ใน repo ทุกคนที่ clone ได้ตัวเดียวกัน อ่านได้ใน 30 วินาที และดูใน <code>git log</code> ได้ว่าใครเพิ่ม</p>
+
+      <h3>ตัว guard: <code>scripts/agent-guard.mjs</code></h3>
+      <div class="tablewrap"><table>
+        <tr><th>กฎ</th><th>ดักจับ</th><th>เหตุผล</th></tr>
+        <tr><td>Database reset</td><td><code>prisma migrate reset</code>, <code>pnpm db:reset</code></td><td>ลบทุกตารางแล้วรัน migration ใหม่</td></tr>
+        <tr><td>ลบ Docker volume</td><td><code>docker compose down -v</code>, <code>docker volume rm/prune</code></td><td>ลบข้อมูล Postgres</td></tr>
+        <tr><td>Force push</td><td><code>git push --force</code>, <code>-f</code> (ยกเว้น <code>--force-with-lease</code>)</td><td>เขียนประวัติ branch ที่คนอื่นดึงไปแล้ว</td></tr>
+        <tr><td>Recursive delete</td><td><code>rm -r</code> ยกเว้น <code>node_modules</code>, <code>dist</code>, <code>.turbo</code></td><td>ลบไฟล์ที่อาจไม่อยู่ใน git</td></tr>
+      </table></div>
+      <p>สคริปต์ไม่ใช่ sandbox (ถ้าห่อคำสั่ง reset ไว้ในสคริปต์อื่นก็หลุดได้) และตั้งใจให้กฎสั้น เมื่อเจอคำสั่งที่อยากให้กันเพิ่ม ก็เพิ่มกฎแล้ว commit</p>
+      <pre><code>echo '{"tool_input":{"command":"pnpm db:reset"}}'   | node scripts/agent-guard.mjs; echo "exit $?"  <span class="cmt"># exit 2</span>
+echo '{"tool_input":{"command":"pnpm db:migrate"}}' | node scripts/agent-guard.mjs; echo "exit $?"  <span class="cmt"># exit 0</span></code></pre>
+
+      <h3>ลงทะเบียนและทดสอบ</h3>
+      <ul class="points">
+        <li>อัปเดต Kiro ก่อน (<code>kiro-cli update</code>) แล้วใช้ prompt ให้ agent อ่านเอกสารของตัวเองและเขียน registration (ห้ามเดา key)</li>
+        <li>Kiro: เพิ่ม <code>hooks</code> ใน <code>.kiro/agents/erp.json</code> ด้วย trigger <code>PreToolUse</code> และ matcher <code>^(execute_bash|execute_pwsh)$</code></li>
+        <li>Claude Code: ลบ <code>disableAllHooks</code> แล้วเพิ่ม <code>hooks.PreToolUse</code> ที่ matcher <code>Bash</code> ใน <code>.claude/settings.json</code></li>
+        <li>Codex: <code>.codex/hooks.json</code> และตั้ง <code>hooks = true</code> ใน <code>config.toml</code></li>
+        <li>ทดสอบ: สั่ง "Reset the development database with pnpm db:reset" ต้องถูกบล็อก, สั่ง "pnpm db:migrate" ต้องรันได้ แล้ว commit บน <code>main</code></li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/hook-states.svg" alt="สี่สถานะของ guard" loading="lazy"></div>
+        <figcaption><b>สี่สถานะ:</b> <b>Off</b> (ไม่ได้ลงทะเบียน คำสั่งรัน), <b>Allows</b> (exit 0 คำสั่งรัน), <b>Refuses</b> (exit 2 คำสั่งไม่รัน agent มาถาม), <b>Broken</b> (สคริปต์พัง คำสั่งรันพร้อมคำเตือน) Off กับ Broken ดูเหมือนกันจากฝั่ง agent จึงต้องทดสอบด้วยมือก่อน</figcaption>
+      </figure>
+
+      <div class="summary">
+        <h3>สรุปบทที่ 5</h3>
+        <ul class="points">
+          <li>hook คือโปรแกรมที่ harness รันในจังหวะที่กำหนด ก่อน tool call ถ้า exit 2 จะบล็อกและส่งเหตุผลกลับ และไม่เคยลืม</li>
+          <li>CI ตรวจผลลัพธ์หลัง push ส่วน hook ตรวจการกระทำก่อนรัน</li>
+          <li>guard มี 4 กฎในสคริปต์สั้นๆ ใช้ร่วมกันทั้ง 3 เครื่องมือ ไม่ใช่ sandbox และไม่ตัดสิน diff</li>
+        </ul>
+      </div>
+      <div class="quiz">
+        <details><summary>ถ้า guard script crash (exit 1) จะเกิดอะไร</summary><div class="ans">คำสั่งยังรันต่อ และแสดง stderr เป็นคำเตือน hook ที่พังจะ "fail open" นี่คือเหตุผลที่ต้องรันสคริปต์ด้วยมือก่อนให้ agent ใช้</div></details>
+        <details><summary>ทำไมไม่เขียน hook "รัน check หลังทุกการแก้ไข"</summary><div class="ans">ซ้ำกับสิ่งที่ <code>implement</code> skill และ CI ทำอยู่แล้ว hook ควรทำสิ่งที่ CI ทำไม่ได้ คือหยุดการกระทำก่อนเกิดขึ้น</div></details>
+      </div>
+    </section>
+
+    <!-- ===================== LESSON 6 ===================== -->
+    <section class="lesson" id="l6">
+      <div class="ticket-strip"><span class="id">LESSON 06</span><span>⏱ 10–15 นาที</span><span>อ่านอย่างเดียว ไม่ต้องลงมือ</span></div>
+      <div class="lesson-head">
+        <div>
+          <h2>Subagents: หน้าต่างใหม่ที่ทำงานให้หน้าต่างหลัก</h2>
+          <div class="src">ต้นฉบับ: <a href="06-subagents-fresh-windows.md">06-subagents-fresh-windows.md</a></div>
+        </div>
+        <label class="donebox"><input type="checkbox" id="done-l6" data-l="l6">อ่านจบแล้ว</label>
+      </div>
+      <div class="goal"><strong>เป้าหมาย:</strong> เข้าใจว่า subagent คืออะไร implement loop ในบทที่ 7 ใช้มันตรงไหน และแต่ละเครื่องมือทำอะไรกับมันได้บ้าง</div>
+      <ol class="questions">
+        <li><span>subagent คืออะไร และแชร์อะไรกับหน้าต่างที่สร้างมัน</span></li>
+        <li><span>subagent ปรากฏตรงไหนใน implement loop และทำไม</span></li>
+        <li><span>Kiro, Claude Code และ Codex ต่างกันอย่างไร และสำคัญอย่างไรต่อการรันหลาย ticket พร้อมกัน</span></li>
+      </ol>
+
+      <h3>Subagent คืออะไร</h3>
+      <ul class="points">
+        <li>เป็น session ที่สองที่ agent หลักสร้างขึ้น มี context window, คำสั่ง และ tool ของตัวเอง agent หลักเขียน <b>brief</b> ให้แล้วรอ <b>รายงาน</b> กลับมา สิ่งเดียวที่เข้า window หลักคือรายงาน</li>
+        <li><b>แชร์:</b> ไฟล์, git checkout, ไฟล์คำสั่ง, skill และสิทธิ์ <b>ไม่แชร์:</b> บทสนทนา เหมือนส่งคำถามให้เพื่อนร่วมงานห้องข้างๆ</li>
+        <li><b>Brief คือทุกอย่าง:</b> subagent รู้แค่สิ่งที่เขียนให้ ใช้ "context pointer" เช่น เลข ticket, spec, path ไฟล์</li>
+        <li><b>รายงานคือสิ่งเดียวที่กลับมา:</b> ถ้าไม่เขียนในรายงานก็หายไปเมื่อ window ปิด</li>
+        <li><b>ไม่ฟรี:</b> แต่ละตัวจ่ายต้นทุนคงที่ใหม่ คุ้มเมื่องานสร้าง token เยอะที่ window หลักไม่ต้องเก็บ หรือเมื่อสองงานจะปนกันถ้าทำใน window เดียว</li>
+      </ul>
+      <figure>
+        <div class="frame"><img src="images/subagent-context.svg" alt="window หลักกับ subagent" loading="lazy"></div>
+        <figcaption><b>หน้าต่างหลักกับ subagent:</b> subagent ได้ brief สั้นๆ อ่าน 20 ไฟล์และรันคำสั่ง แล้วส่งกลับแค่รายงาน 3 ประโยค ทุกอย่างที่มันอ่านอยู่ใน window ของมันเองและถูกทิ้งไป</figcaption>
+      </figure>
+
+      <h3>เจอที่ไหนมาแล้ว</h3>
+      <ul class="points">
+        <li><b>grilling skill</b> ส่ง subagent ไปหาข้อเท็จจริงจากโค้ด ส่วนการสัมภาษณ์อยู่ใน window หลัก</li>
+        <li><b>Kiro CLI</b> มี subagent ภายในสองตัว (เก็บ context และงานทั่วไป) <b>Claude Code</b> มี explorer ในตัว</li>
+        <li><b>code-review skill</b> ที่ <code>implement</code> เรียกหลัง commit สร้าง subagent สองตัวพร้อมกัน:</li>
+      </ul>
+      <div class="tablewrap"><table>
+        <tr><th>Subagent</th><th>ได้รับใน brief</th><th>ถูกขอให้หา</th></tr>
+        <tr><td><b>Standards</b></td><td>diff, รายการไฟล์มาตรฐาน, รายการ code smell</td><td>จุดที่ผิดมาตรฐาน พร้อมอ้างกฎ ไม่เกิน 400 คำ</td></tr>
+        <tr><td><b>Spec</b></td><td>diff และ spec</td><td>requirement ที่ขาด, พฤติกรรมที่ไม่มีใครขอ, ที่ดูเสร็จแต่ผิด ไม่เกิน 400 คำ</td></tr>
+      </table></div>
+      <figure>
+        <div class="frame"><img src="images/subagent-fan-out.svg" alt="window หลักส่ง brief ให้ subagent หลายตัว" loading="lazy"></div>
+        <figcaption><b>Fan-out:</b> window หลักส่ง brief สามฉบับพร้อมกันให้ Standards reviewer, Spec reviewer และงานอื่นๆ แต่ละตัวส่งรายงานสั้นกลับมา subagent ไม่เห็นกันและกัน และแต่ละตัวจ่ายต้นทุนคงที่ใหม่</figcaption>
+      </figure>
+      <p>ทำไมแยกสองแกน: โค้ดอาจทำตามมาตรฐานทุกข้อแต่ทำผิดสิ่ง หรือทำตรงที่ขอแต่ผิดมาตรฐานทั้งหมด reviewer ตัวเดียวที่ถามทั้งสองเรื่องมักตอบเรื่องที่ง่ายกว่า ข้อจำกัดคือ reviewer ทั้งคู่ <b>ถูก brief โดยผู้เขียนโค้ด</b> และ <b>ไม่เคยรันแอป</b> การเดโมจึงยังเป็นหน้าที่ของคุณ ด้านงบประมาณ ticket หนึ่งใช้เกิน 100K token การรีวิวใน subagent ใช้ window หลักไม่ถึง 800 คำ</p>
+
+      <h3>Subagent เป็นผู้ลงมือ (อ่านไว้ ยังไม่ต้องรัน)</h3>
+      <ul class="points">
+        <li><code>implement-spec</code>: orchestrator ส่ง ticket แต่ละตัวใน frontier ให้ implementer subagent คนละ git worktree ทำงานเบื้องหลัง แล้ว merger subagent รวมเข้า integration branch ตอนนี้ทำได้เต็มรูปแบบแค่ใน Claude Code</li>
+        <li><b>Shell loop</b>: เรียก agent แบบ non-interactive ทีละ ticket เช่น <code>claude -p "/implement-ticket #16"</code></li>
+        <li>ทั้งสองแบบตัดคนออกจากขั้นเดโม/อ่าน diff/ติ๊กเกณฑ์ ควรรัน loop ด้วยมือจนรู้ว่า ticket แย่หน้าตาเป็นอย่างไรก่อน</li>
+      </ul>
+
+      <h3>สามเครื่องมือ สามคำตอบ</h3>
+      <div class="tablewrap"><table>
+        <tr><th></th><th>Kiro CLI</th><th>Claude Code</th><th>Codex</th></tr>
+        <tr><td>นิยามที่</td><td><code>.kiro/agents/&lt;name&gt;.json</code></td><td><code>.claude/agents/&lt;name&gt;.md</code></td><td><code>.codex/agents/&lt;name&gt;.toml</code></td></tr>
+        <tr><td>ใครตัดสินใจส่งงาน</td><td>agent หลักจาก description หรือเราระบุชื่อ</td><td>agent หลักจาก description หรือเราระบุชื่อ</td><td>เมื่อสั่งตรงๆ หรือมีคำสั่งใน AGENTS.md/skill</td></tr>
+        <tr><td>ขนาน / เบื้องหลัง</td><td>ขนานได้ เบื้องหลังเฉพาะเมื่อเปิด workflows</td><td>ทั้งขนานและเบื้องหลัง สูงสุด 20 ตัว</td><td>ขนาน แต่รอทุกตัว</td></tr>
+        <tr><td>checkout แยก</td><td>ไม่ ใช้ working tree ร่วม</td><td>ได้ ด้วย <code>isolation: worktree</code></td><td>ไม่มีในเอกสาร</td></tr>
+      </table></div>
+      <p>ใน Kiro subagent ใช้ค่าของ default agent (<code>erp</code>) จึงได้ guard hook เดียวกัน ทดสอบแล้วว่าสั่ง subagent รัน <code>pnpm db:reset</code> ก็ถูกบล็อกเหมือนกัน</p>
+
+      <div class="summary">
+        <h3>สรุปบทที่ 6</h3>
+        <ul class="points">
+          <li>subagent คือ session ที่มี window ของตัวเอง แชร์ไฟล์และกฎ แต่ไม่แชร์บทสนทนา brief เข้า รายงานออก ที่เหลือทิ้ง</li>
+          <li>ใน <code>code-review</code> มี Standards กับ Spec reviewer ดีกว่าผู้เขียนอ่าน diff ตัวเอง แต่แทนการเดโมของคุณไม่ได้</li>
+          <li>Skill พกพาข้ามเครื่องมือได้ แต่ subagent ไม่ได้ แต่ละเครื่องมือมี format และกฎของตัวเอง</li>
+        </ul>
+      </div>
+      <div class="quiz">
+        <details><summary>ทำไม implementer หลายตัวใน Kiro ถึงเสี่ยง</summary><div class="ans">subagent ของ Kiro ใช้ checkout ร่วมกัน implementer สองตัวที่แก้ไฟล์เดียวกันจะเขียนทับกัน ต่างจาก Claude Code ที่ให้ worktree แยก</div></details>
+        <details><summary>ถ้า subagent เจอข้อมูลสำคัญแต่ไม่ได้ใส่ในรายงาน จะเป็นอย่างไร</summary><div class="ans">ข้อมูลหายไปเมื่อ window ของมันปิด brief ที่ดีจึงต้องระบุว่ารายงานต้องมีอะไรและยาวได้แค่ไหน</div></details>
+      </div>
+    </section>
+
+    <!-- ===================== LESSON 7 ===================== -->
+    <section class="lesson" id="l7">
+      <div class="ticket-strip"><span class="id">LESSON 07</span><span>⏱ 45–60 นาที</span></div>
+      <div class="lesson-head">
+        <div>
+          <h2>จาก ticket สู่โค้ด: หนึ่งรอบของ implement loop</h2>
+          <div class="src">ต้นฉบับ: <a href="07-from-tickets-to-code.md">07-from-tickets-to-code.md</a></div>
+        </div>
+        <label class="donebox"><input type="checkbox" id="done-l7" data-l="l7">อ่านจบแล้ว</label>
+      </div>
+      <div class="goal"><strong>เป้าหมาย:</strong> หยิบ ticket แรกที่ไม่ถูกบล็อกจากบทที่ 4 ให้ agent สร้างใน window ใหม่ และจบด้วย pull request ที่คุณและ CI พิสูจน์แล้ว พร้อมให้คนอื่นรีวิวและ merge</div>
+      <ol class="questions">
+        <li><span>ทำไม agent ได้ ticket เดียว ใน window ใหม่ และไม่มีอะไรอื่น</span></li>
+        <li><span><code>implement</code> skill ทำอะไร และ loop รอบๆ มันต้องทำอะไร</span></li>
+        <li><span>หน้าที่ของคุณในแต่ละรอบคืออะไร และทำไม loop หยุดก่อน merge</span></li>
+      </ol>
+
+      <figure>
+        <div class="frame"><img src="images/implement-loop.svg" alt="implement loop แปดขั้น" loading="lazy"></div>
+        <figcaption><b>Implement loop:</b> ค้นหา frontier → สร้าง branch เอง → รัน <code>/implement-ticket #N</code> ใน window ใหม่ (ยืนยัน seams, TDD red-green, review, commit) → agent push และเปิด PR → คุณเดโม อ่าน diff ติ๊กเกณฑ์ รอ CI → merge (หลังคนอื่นรีวิว) → ticket ปิด gate เปิด → clear แล้ววนกลับ <b>state อยู่ใน git และ GitHub ไม่ใช่ในบทสนทนา</b></figcaption>
+      </figure>
+
+      <h3>Skill <code>implement</code> มีแค่ 7 บรรทัด</h3>
+      <ul class="points">
+        <li>ดึง ticket และบอกชื่อก่อนเริ่ม → เรียก <code>tdd</code> ที่ seams ที่ตกลงกันไว้ → typecheck และรัน test บ่อยๆ, รันทั้งชุดตอนท้าย → เรียก <code>code-review</code> → commit</li>
+        <li>สิ่งที่ <b>ไม่ทำ:</b> ไม่สร้าง branch, ไม่เปิด PR, ไม่ปิด ticket, ไม่ติ๊ก checkbox, ไม่หา ticket ถัดไป สิ่งเหล่านี้คือ "loop" และเป็นหน้าที่ของคุณ</li>
+        <li><code>implement-ticket</code> (skill ของ repo นี้) เพิ่มกฎ 6 ข้อ: อยู่ branch เดิมและใส่ <code>#N</code> ใน commit, แสดง seams แล้วรอคำยืนยัน, <code>pnpm check</code> และ <code>pnpm format</code> ต้องผ่าน, review <b>หลัง</b> commit โดยเทียบกับ <code>main</code>, push และเปิด PR ที่มี <code>Closes #N</code>, ห้ามปิดหรือติ๊ก ticket</li>
+      </ul>
+      <div class="callout"><strong>ทำไม review หลัง commit:</strong> <code>code-review</code> diff ประวัติที่ commit แล้วเทียบกับจุดคงที่ แต่ <code>implement</code> เรียกมันก่อน commit ทำให้มักเห็น diff ว่างและไม่รายงานอะไร การ commit ก่อนแล้ว review เทียบกับ <code>main</code> คือทางแก้</div>
+
+      <h3>ก่อนเริ่ม</h3>
+      <pre><code>gh repo set-default                   <span class="cmt"># เลือก fork ของตัวเอง ไม่ใช่ repo ต้นฉบับ</span>
+<span class="cmt"># เปิด Actions บน fork ที่ github.com (fork ปิด workflow ไว้)</span>
+npx skills@latest add mattpocock/skills --skill pr   <span class="cmt"># แล้ว commit บน main ก่อนแตก branch</span>
+pnpm dev:local                        <span class="cmt"># Postgres + migrate + seed + ทั้งสองแอป</span></code></pre>
+
+      <h3>บอร์ดงาน = query</h3>
+      <p>ไม่มี kanban มีแค่ issue ที่มี label <code>ready-for-agent</code> คอลัมน์ "to do" คือ <b>frontier</b>: ticket ที่เปิดอยู่และตัวบล็อกปิดหมดแล้ว ถ้า query ไม่คืนอะไรเลย แปลว่า dependency วนเป็นวงต้องแก้ ticket ก่อน ถ้าคืนหลายตัว เลือกตัวที่เล็กที่สุด เลข issue ของแต่ละคนจะไม่ตรงกับตัวอย่าง (<code>#15</code>, <code>#16</code>)</p>
+      <pre><code>gh api "repos/{owner}/{repo}/issues/&lt;spec&gt;/sub_issues" --paginate \
+  --jq '.[] | select(.state=="open" and .issue_dependencies_summary.blocked_by==0) | "#\(.number)  \(.title)"'</code></pre>
+
+      <h3>ตาของ agent</h3>
+      <pre><code>gh issue view 16                      <span class="cmt"># อ่าน ticket: มี Covers / Demo / Seams ไหม</span>
+git switch -c ticket/16-roles-and-stores
+/clear   แล้ว   /context show
+/implement-ticket #16</code></pre>
+      <ol class="points">
+        <li><b>บอกชื่อ ticket</b> ถ้าไม่ใช่ ticket ของคุณให้หยุด</li>
+        <li><b>สำรวจและเสนอ seams</b> ตอบ yes ถ้าตรงกับบรรทัด <code>Seams:</code> ถ้าเสนอ seam ที่ ticket ไม่ได้ระบุให้ถามเหตุผล</li>
+        <li><b>Red แล้ว green ทีละ slice</b> ถ้าเห็นเขียน test ทั้งหมดก่อนแล้วค่อยเขียนโค้ด นั่นคือ horizontal slicing ให้ทักท้วง</li>
+        <li><b>Commit แล้ว review</b> subagent สองตัวรายงานใต้ <code>## Standards</code> และ <code>## Spec</code> แก้แล้ว commit อีกครั้ง</li>
+        <li><b>Push และเปิด PR</b> จบด้วย URL</li>
+      </ol>
+      <p>ใช้เวลา 20–40 นาที และเกิน 100K token ห้าม <code>/compact</code> กลางทาง ถ้า window เต็มก่อนได้ PR ให้ commit ส่วนที่ผ่าน, <code>/clear</code>, แล้วรันใหม่พร้อมบอกว่า "branch มีงานบางส่วนแล้ว อ่าน commit ก่อน"</p>
+
+      <h3>ตาของคุณ: demo, diff, boxes, CI</h3>
+      <ul class="points">
+        <li><b>ทำตามบรรทัด Demo:</b> เช่น login เป็นผู้ใช้ทดสอบแต่ละคนแล้วดูว่า <code>/api/auth/me</code> คืน role และ store ถูก ถ้าเดโมไม่ผ่าน ticket ยังไม่เสร็จ ไม่ว่า test จะว่าอย่างไร</li>
+        <li><b>อ่าน diff เทียบกับเกณฑ์:</b> หา test หรือโค้ดที่ทำให้เกณฑ์แต่ละข้อเป็นจริง เกณฑ์ที่หาไม่เจอคือเกณฑ์ที่ agent ตัดสินเองว่าผ่านแล้ว</li>
+        <li><b>ติ๊ก checkbox</b> บน GitHub เอง เป็นหลักฐานว่าคนได้ตรวจแล้ว</li>
+        <li><b>รอ CI เขียว</b> ถ้าแดง แปะ output ลงใน session เดิมให้ agent แก้ เขียวแล้วจึง <code>/clear</code></li>
+      </ul>
+      <p>บทนี้ <b>ไม่ merge</b> PR ต้องให้คนที่ไม่ใช่ผู้เขียนอ่านก่อน (บทที่ 8 เพิ่ม AI reviewer มาช่วย) เหตุผลคือเมื่อ merge แล้ว ticket ที่ถูกบล็อกทั้งหมดจะเปิดให้ทำ ticket ที่ยังไม่ได้พิสูจน์จะเปิดประตูให้ทุกงานที่ตามมา</p>
+
+      <h3>เมื่อ ticket ผิด</h3>
+      <p>agent <b>ห้ามตีความ ticket ใหม่เอง</b> กฎคือ <b>หยุด, แก้ issue, <code>/clear</code>, เริ่มใหม่</b> ถ้า agent ถามสิ่งที่ ticket ควรตอบ ให้ตอบบน ticket ไม่ใช่ในแชท เพราะ session ถัดไปและ reviewer จะไม่เห็นคำตอบในแชท</p>
+
+      <div class="summary">
+        <h3>สรุปบทที่ 7</h3>
+        <ul class="points">
+          <li>หนึ่ง ticket หนึ่ง window ใหม่ บทสนทนาทิ้งได้ spec, ticket, dependency, branch และ PR คือ state</li>
+          <li><code>implement</code> แค่ fetch, TDD, check, review, commit ส่วน loop รอบนอกเป็นของคุณ กฎของ repo อยู่ใน <code>implement-ticket</code></li>
+          <li>หน้าที่คุณคือ demo, diff, ติ๊กเกณฑ์, CI เมื่อ ticket ผิดให้แก้ที่ ticket และ loop หยุดที่ PR</li>
+        </ul>
+      </div>
+      <div class="quiz">
+        <details><summary>ทำไมสร้าง branch เองแทนให้ agent สร้าง</summary><div class="ans">skill commit ลง branch ที่มันอยู่และไม่เคยสร้าง branch คำสั่ง shell บรรทัดเดียวเชื่อถือได้มากกว่าการหวังให้ agent จำได้</div></details>
+        <details><summary>ทำไม agent ห้ามติ๊ก checkbox หรือปิด ticket เอง</summary><div class="ans">การให้ agent พิสูจน์งานของตัวเองคือสิ่งที่ loop ออกแบบมาไม่ให้เชื่อ การปิดเป็นหน้าที่ของการ merge การติ๊กเป็นหน้าที่ของคุณ</div></details>
+      </div>
+    </section>
+
+    <!-- ===================== LESSON 8 ===================== -->
+    <section class="lesson" id="l8">
+      <div class="ticket-strip"><span class="id">LESSON 08</span><span>⏱ 30–45 นาที</span></div>
+      <div class="lesson-head">
+        <div>
+          <h2>AI รีวิวทุก Pull Request: Kiro ใน GitHub Actions</h2>
+          <div class="src">ต้นฉบับ: <a href="08-ai-reviews-the-pull-request.md">08-ai-reviews-the-pull-request.md</a></div>
+        </div>
+        <label class="donebox"><input type="checkbox" id="done-l8" data-l="l8">อ่านจบแล้ว</label>
+      </div>
+      <div class="goal"><strong>เป้าหมาย:</strong> ติดตั้ง reviewer agent แบบอ่านอย่างเดียวบน fork ที่อ่าน ticket, diff และ PR body ของทุก PR เขียนรีวิวหนึ่งฉบับให้ job โพสต์เป็น comment และไม่เคย approve, merge หรือปิดอะไร แล้วให้คน merge PR จากบทที่ 7 โดยใช้รีวิวนั้นเป็นบท</div>
+      <ol class="questions">
+        <li><span>reviewer ที่ไม่เห็นตอนเขียนโค้ดหาอะไรเจอที่ผู้เขียนหาไม่เจอ และยังทำอะไรไม่ได้</span></li>
+        <li><span>ทำให้ agent อ่านอย่างเดียวได้อย่างไร และทำไม "ห้าม approve ห้าม merge" ถูกบังคับสามชั้น</span></li>
+        <li><span>ทำไม AI review เป็นคำแนะนำให้คน ไม่ใช่สถานะบน GitHub</span></li>
+      </ol>
+
+      <figure>
+        <div class="frame"><img src="images/ai-review.svg" alt="ลำดับการทำงานของ AI review" loading="lazy"></div>
+        <figcaption><b>ภาพรวม:</b> trigger (push ไปที่ PR หรือสั่งด้วยมือ) → GitHub Actions job ติดตั้ง Kiro CLI และรันแบบ headless ด้วย API key จาก secret → reviewer agent อ่าน ticket, diff, PR body และ CI ภายใต้ guard hook เดียวกัน เขียนได้แค่ไฟล์รีวิว → job โพสต์เป็น comment → คนอ่านรีวิว เดโม อ่าน diff แล้ว merge เอง</figcaption>
+      </figure>
+
+      <h3>มันคืออะไร และไม่ใช่อะไร</h3>
+      <ul class="points">
+        <li>คล้าย CodeRabbit หรือ Copilot code review แต่รีวิว <b>เทียบกับ acceptance criteria ของ ticket</b> และ <code>AGENTS.md</code> brief เป็นไฟล์ใน repo ที่แก้ได้ และใช้ guard hook เดียวกับบทที่ 5</li>
+        <li>reviewer หยิบ branch ขึ้นมาแบบเย็นชา (cold) ไม่ได้ brief จากผู้เขียน แก้ปัญหาแรกของบทที่ 7 ได้ แต่ <b>ไม่มี database และแอปใน job</b> บรรทัด Demo จึงยังเป็นหน้าที่คน</li>
+        <li>บรรทัดสุดท้ายของรีวิวคือ <b>คำแนะนำ</b> ไม่ใช่ approval GitHub แสดงเป็น comment ไม่ใช่เครื่องหมายถูกสีเขียว</li>
+      </ul>
+
+      <h3>เตรียม Kiro API key</h3>
+      <pre><code>gh secret set KIRO_API_KEY            <span class="cmt"># เก็บบน fork แบบเข้ารหัส</span>
+gh secret list</code></pre>
+      <p>key เป็น credential อายุยาว ใช้ได้เฉพาะ Kiro Pro ขึ้นไป สร้างเองที่ app.kiro.dev ห้ามใส่ในไฟล์ใน repo และห้ามใช้ key เดียวกันทั้งห้อง</p>
+
+      <h3>Reviewer agent: <code>.kiro/agents/reviewer.json</code></h3>
+      <ul class="points">
+        <li><b>Brief เป็นไฟล์:</b> <code>"prompt": "file://reviewer.md"</code> diff และรีวิวได้</li>
+        <li><b>Resources คือกฎ ไม่ใช่ skill:</b> โหลดแค่ <code>AGENTS.md</code> สามไฟล์</li>
+        <li><b>Permissions ทำให้อ่านอย่างเดียว:</b> อ่านได้ทั้ง checkout, เขียนได้แค่ใต้ <code>.ai-review/</code>, shell ได้แค่คำสั่งอ่าน (<code>gh pr view/diff/checks</code>, <code>gh issue view</code>, <code>git log</code>) และ <b>deny</b> คำสั่งโพสต์/merge/close/push ทั้งหมด</li>
+        <li><b>ในโหมด headless ทุก <code>ask</code> ถือเป็น deny</b> จึงห้ามใช้ <code>--trust-all-tools</code> เพราะจะเปลี่ยน <code>ask</code> เป็น <code>allow</code></li>
+        <li><code>.ai-review/</code> ต้องอยู่ใน checkout (และอยู่ใน <code>.gitignore</code>) ไม่ใช่ <code>/tmp</code> เพราะการเขียนนอก workspace จะกลายเป็น ask = ปฏิเสธ</li>
+        <li><b>Hook เดียวกัน</b> กับบทที่ 5</li>
+      </ul>
+
+      <h3>Brief: <code>.kiro/agents/reviewer.md</code></h3>
+      <div class="tablewrap"><table>
+        <tr><th>การตรวจ</th><th>ทำอะไร</th></tr>
+        <tr><td><b>Criteria</b></td><td>ทุกเกณฑ์ใน ticket หา test หรือโค้ดพร้อมไฟล์และบรรทัด หรือเขียนว่า <b>not found</b></td></tr>
+        <tr><td><b>Standards</b></td><td>diff เทียบกับ <code>AGENTS.md</code>: contract-first, <code>.js</code> ใน import, env var, test ที่ seams ที่ระบุ</td></tr>
+        <tr><td><b>Evidence</b></td><td>คนที่ไม่ได้อยู่ในห้องทำตาม Demo จาก PR body ได้ไหม ขาดอะไร</td></tr>
+        <tr><td><b>Merge danger</b></td><td>migration, seed, shared package, route หรือ schema ที่เปลี่ยนชื่อ, สิ่งที่ ticket ถัดไปจะรับช่วง</td></tr>
+      </table></div>
+      <p>เขียนผลลงไฟล์ <code>.ai-review/review.md</code> ตาม template พร้อม verdict เป็นคำพูด เช่น "Looks mergeable after the demo", "Read the findings first", "Do not merge yet"</p>
+      <div class="callout"><strong>ห้าม approve ห้าม merge บังคับสามชั้น:</strong> (1) permission rules ห้าม agent โพสต์ทุกรูปแบบ (2) guard hook ห้าม approve และ merge กับทุก agent (3) brief บอกว่าห้าม คำสั่งใน prompt อ่อนที่สุดในสามชั้น สถานะบน GitHub ถูกกำหนดโดยบรรทัดเดียวใน workflow ที่เขียนว่า <code>--comment</code></div>
+
+      <h3>ขยาย guard</h3>
+      <p>เพิ่มกฎสามข้อใน <code>scripts/agent-guard.mjs</code>: ห้าม <code>gh pr merge</code>, ห้าม <code>gh pr review --approve</code>/<code>--request-changes</code> (ยัง <code>--comment</code> ได้), ห้าม <code>gh issue close</code>/<code>gh pr close</code>/<code>reopen</code> กฎนี้มีผลกับ agent <code>erp</code> ด้วย</p>
+
+      <h3>ทดสอบในเครื่องก่อน แล้วค่อยขึ้น Actions</h3>
+      <pre><code>export KIRO_API_KEY="..."             <span class="cmt"># เฉพาะ terminal นี้</span>
+kiro-cli chat --v3 --no-interactive --agent reviewer "Review pull request #18."
+gh pr review 18 --comment --body-file .ai-review/review.md   <span class="cmt"># โพสต์เองครั้งเดียว</span>
+
+<span class="cmt"># หลัง commit .github/workflows/ai-review.yml บน main</span>
+gh workflow run ai-review.yml -f pr=18
+gh run watch</code></pre>
+      <ul class="points">
+        <li>workflow แยกจาก <code>ci.yml</code>: CI คือ test ที่บล็อก merge ได้ ส่วนรีวิวคือความเห็นที่ไม่ควรทำให้ CI แดง</li>
+        <li>trigger ที่ <code>opened, synchronize, reopened</code> และ <code>workflow_dispatch</code>, ใช้ <code>concurrency</code> ยกเลิก run เก่า, <code>continue-on-error</code>, <code>timeout-minutes: 20</code></li>
+        <li>ต้องมี <code>actions/setup-node</code> ไม่อย่างนั้น guard รันไม่ได้และจะ fail open</li>
+        <li>PR จาก fork อื่นไม่ได้รับ secret job จะข้ามแบบ exit 0</li>
+      </ul>
+
+      <h3>ตาของคุณ: เดโม, diff, merge ด้วยมือ</h3>
+      <ol class="points">
+        <li>อ่าน AI review จดบรรทัด verdict และทุกแถว <b>not found</b></li>
+        <li>ทำตามบรรทัด Demo บนเครื่องตัวเองโดยเปิดแอป</li>
+        <li>เปิดทุกแถว not found แล้วตัดสินว่าเกณฑ์ยังไม่ถูกพิสูจน์จริง หรือ reviewer หาไม่เจอ</li>
+        <li>อ่าน Merge danger เทียบกับ <code>git log main..</code></li>
+        <li>Merge ด้วยมือ: <code>gh pr merge &lt;n&gt; --squash</code> จาก terminal ของคุณเอง แล้วรัน frontier query จะเห็น ticket ที่ถูกปลดบล็อก</li>
+      </ol>
+      <p>เมื่อรีวิวผิด แทบไม่ต้องแก้โค้ด ให้แก้ <code>reviewer.md</code>, แก้ ticket หรือเพิ่ม glob แคบๆ ใน allow list ห้ามใช้ <code>--trust-all-tools</code></p>
+
+      <div class="summary">
+        <h3>สรุปบทที่ 8</h3>
+        <ul class="points">
+          <li>reviewer แบบ cold หาสิ่งที่ต่างออกไป แต่เดโมไม่ได้ บรรทัดสุดท้ายจึงเป็นคำแนะนำให้คนที่จะเดโม</li>
+          <li>อ่านอย่างเดียวด้วยสามชั้น: permission rules, guard hook และ brief</li>
+          <li>agent เขียนไฟล์เท่านั้น workflow โพสต์ด้วย <code>--comment</code> การ approve และ merge เป็นของคน</li>
+          <li>เป็นคำแนะนำใน workflow แยก ไม่ทำให้ PR fail และข้ามอย่างสะอาดเมื่อไม่มี key</li>
+        </ul>
+      </div>
+      <div class="quiz">
+        <details><summary>ทำไมห้ามใส่ <code>--trust-all-tools</code> ใน workflow</summary><div class="ans">ในโหมด headless ทุก <code>ask</code> ถือเป็น deny ซึ่งทำให้ agent อ่านอย่างเดียว ธงนี้เปลี่ยน ask ทั้งหมดเป็น allow คืนคำสั่งทุกตัวที่ deny list ไม่ได้ระบุให้ agent</div></details>
+        <details><summary>ถ้ารีวิวขึ้นสถานะ approve จะต้องตรวจที่ไหนก่อน</summary><div class="ans">agent โพสต์ไม่ได้ ดังนั้นบรรทัดโพสต์ใน <code>ai-review.yml</code> ถูกเปลี่ยน หรือมีคนโพสต์ด้วยธงผิด ให้ดู <code>git log -p .github/workflows/ai-review.yml</code> และใส่ <code>--comment</code> กลับ</div></details>
+      </div>
+    </section>
+
+    <footer>
+      สรุปจากเอกสารในโฟลเดอร์ <code>lessons/</code> ของ turborepo-fullstack-erp-ai-coding-workshop · อ่านรายละเอียดคำสั่งเต็มและภาคผนวก (Claude Code / Codex) ได้จากไฟล์ .md ต้นฉบับของแต่ละบท
+    </footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  var KEY = "lessons-th-done";
+  var done = {};
+  try { done = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { done = {}; }
+  var links = {};
+  document.querySelectorAll("#nav a").forEach(function (a) { links[a.getAttribute("href").slice(1)] = a; });
+  function paint() {
+    Object.keys(links).forEach(function (id) { links[id].classList.toggle("done", !!done[id]); });
+  }
+  document.querySelectorAll(".donebox input").forEach(function (cb) {
+    var id = cb.dataset.l;
+    cb.checked = !!done[id];
+    cb.addEventListener("change", function () {
+      done[id] = cb.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (e) {}
+      paint();
+    });
+  });
+  paint();
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          Object.values(links).forEach(function (a) { a.classList.remove("active"); });
+          var a = links[en.target.id]; if (a) a.classList.add("active");
+        }
+      });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    document.querySelectorAll("section.lesson").forEach(function (s) { io.observe(s); });
+  }
+})();
+</script>
