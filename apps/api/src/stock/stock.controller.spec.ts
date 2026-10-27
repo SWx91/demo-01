@@ -46,6 +46,8 @@ describe('StockController', () => {
       balanceAfter: 18,
       movementType: 'RECEIPT',
       sourceDocument: 'PO-1',
+      productNameSnapshot: 'Widget',
+      sellingPriceMinorSnapshot: 12500,
       actorId: 'user1',
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
     };
@@ -87,6 +89,45 @@ describe('StockController', () => {
     });
   });
 
+  // Historical snapshot fidelity (ticket #19, TOR 4.3): the movement the database layer returns
+  // already carries the product's name and price as they were at posting time, and the contract
+  // schema requires both — the route must pass them through, not drop them (AC1).
+  it('returns the product name and selling price snapshot a movement recorded (AC1)', async () => {
+    const movement = {
+      id: 'mv1',
+      storeId: 'store-b01',
+      productId: 'prod1',
+      quantityChange: 8,
+      balanceBefore: 10,
+      balanceAfter: 18,
+      movementType: 'RECEIPT',
+      sourceDocument: 'PO-1',
+      productNameSnapshot: 'Widget',
+      sellingPriceMinorSnapshot: 12500,
+      actorId: 'user1',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    vi.spyOn(database, 'postStockMovement').mockResolvedValue(movement as never);
+    const controller = await createController({});
+
+    const result = await call(
+      controller.post(actor),
+      {
+        storeId: 'store-b01',
+        productId: 'prod1',
+        quantityChange: 8,
+        movementType: 'RECEIPT',
+        sourceDocument: 'PO-1',
+      },
+      { context: {} },
+    );
+
+    expect(result).toMatchObject({
+      productNameSnapshot: 'Widget',
+      sellingPriceMinorSnapshot: 12500,
+    });
+  });
+
   it('lists the stock balances in a store', async () => {
     const findMany = vi.fn().mockResolvedValue([
       { storeId: 'store-b01', productId: 'prod1', quantity: 10 },
@@ -103,6 +144,60 @@ describe('StockController', () => {
     expect(findMany).toHaveBeenCalledWith({
       where: { storeId: 'store-b01' },
       select: { storeId: true, productId: true, quantity: true },
+    });
+  });
+
+  // Historical search (ticket #19, AC3): a product's movement history still shows the details
+  // each movement recorded, regardless of any edit made to the product since — the route is a
+  // plain read of what postStockMovement already wrote, never a live join against the product.
+  it("searches a product's stock movement history, each still showing its recorded snapshot (AC3)", async () => {
+    const findMany = vi.fn().mockResolvedValue([
+      {
+        id: 'mv1',
+        storeId: 'store-b01',
+        productId: 'prod1',
+        quantityChange: 10,
+        balanceBefore: 0,
+        balanceAfter: 10,
+        movementType: 'OPENING',
+        sourceDocument: 'OPEN-1',
+        productNameSnapshot: 'SKU001 before the edit',
+        sellingPriceMinorSnapshot: 10000,
+        actorId: 'user1',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    ]);
+    const controller = await createController({ stockMovement: { findMany } });
+
+    const result = await call(
+      controller.listMovements(),
+      { storeId: 'store-b01', productId: 'prod1' },
+      { context: {} },
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        productNameSnapshot: 'SKU001 before the edit',
+        sellingPriceMinorSnapshot: 10000,
+      }),
+    ]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { storeId: 'store-b01', productId: 'prod1' },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        storeId: true,
+        productId: true,
+        quantityChange: true,
+        balanceBefore: true,
+        balanceAfter: true,
+        movementType: true,
+        sourceDocument: true,
+        productNameSnapshot: true,
+        sellingPriceMinorSnapshot: true,
+        actorId: true,
+        createdAt: true,
+      },
     });
   });
 
@@ -185,6 +280,7 @@ describe('StockController', () => {
     );
     expect(routes).toContain('post');
     expect(routes).toContain('listBalances');
+    expect(routes).toContain('listMovements');
     expect(routes.some((name) => /update|edit|delete|remove/i.test(name))).toBe(false);
   });
 
@@ -207,6 +303,8 @@ describe('StockController', () => {
       balanceAfter: 10,
       movementType: 'ADJUSTMENT',
       sourceDocument: 'ตรวจนับสต็อกพบส่วนต่าง',
+      productNameSnapshot: 'Widget',
+      sellingPriceMinorSnapshot: 12500,
       actorId: 'user-manager',
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
     };
