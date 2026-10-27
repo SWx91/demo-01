@@ -1,9 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import {
-  disconnectHarness,
-  prisma,
-  resetStockData,
-} from './stock.integration.harness.js';
+import { disconnectHarness, prisma, resetStockData } from './stock.integration.harness.js';
 import { LOAD_DATASET, seedLoadData } from './load.harness.js';
 
 // NFR-05 (ticket #20): the load seed. The performance target is proven against a real Postgres

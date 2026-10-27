@@ -68,9 +68,7 @@ export async function seedLoadData(prisma: PrismaLike): Promise<LoadSeed> {
     unit: 'unit',
     sellingPriceMinor: 1_000 + i,
   }));
-  await createInBatches(productRows, (batch) =>
-    prisma.product.createMany({ data: batch }),
-  );
+  await createInBatches(productRows, (batch) => prisma.product.createMany({ data: batch }));
   const products = await prisma.product.findMany({
     where: { sku: { startsWith: 'LOAD-SKU-' } },
     select: { id: true, name: true, sellingPriceMinor: true },
@@ -121,9 +119,7 @@ export async function seedLoadData(prisma: PrismaLike): Promise<LoadSeed> {
       actorId: actor.id,
     });
   }
-  await createInBatches(movementRows, (batch) =>
-    prisma.stockMovement.createMany({ data: batch }),
-  );
+  await createInBatches(movementRows, (batch) => prisma.stockMovement.createMany({ data: batch }));
 
   // Advance each balance to reflect the movements posted against it.
   await createInBatches(

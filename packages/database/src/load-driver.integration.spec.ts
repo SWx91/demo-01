@@ -1,9 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import {
-  disconnectHarness,
-  prisma,
-  resetStockData,
-} from './stock.integration.harness.js';
+import { disconnectHarness, prisma, resetStockData } from './stock.integration.harness.js';
 import { seedLoadData } from './load.harness.js';
 import { runLoad } from './load-driver.js';
 

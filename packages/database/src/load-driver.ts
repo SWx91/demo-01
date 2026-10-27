@@ -35,7 +35,13 @@ export interface RunLoadResult {
   stockView: LatencySummary;
 }
 
-const DEFAULT_SEARCH_TERMS = ['Load', 'Product', 'LOAD-SKU-0001', 'Beverages', 'Household'] as const;
+const DEFAULT_SEARCH_TERMS = [
+  'Load',
+  'Product',
+  'LOAD-SKU-0001',
+  'Beverages',
+  'Household',
+] as const;
 
 /** One timed query: run it, return how many milliseconds it took. */
 async function timed(now: () => number, query: () => Promise<unknown>): Promise<number> {
@@ -50,10 +56,7 @@ async function timed(now: () => number, query: () => Promise<unknown>): Promise<
  * mirror the controllers: search is an OR over SKU/name with a case-insensitive `contains` ordered
  * by SKU; stock-view lists the store's balances.
  */
-export async function runLoad(
-  prisma: PrismaLike,
-  options: RunLoadOptions,
-): Promise<RunLoadResult> {
+export async function runLoad(prisma: PrismaLike, options: RunLoadOptions): Promise<RunLoadResult> {
   const { seed, users, durationMs } = options;
   const now = options.now ?? Date.now;
   const searchTerms = options.searchTerms ?? DEFAULT_SEARCH_TERMS;
