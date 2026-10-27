@@ -25,6 +25,7 @@ const machine: MachineInfo = {
 const environment: ReportEnvironment = {
   label: 'Docker Postgres 18',
   databaseUrl: 'postgresql://erp:erp@localhost:5432/erp',
+  apiUrl: 'http://localhost:3000',
   dataset: { products: 1000, movements: 10000 },
   ranAt: '2026-10-27T00:00:00.000Z',
 };
@@ -61,6 +62,9 @@ describe('renderReport', () => {
     // The credential never appears, even though the environment carried one.
     expect(md).not.toContain(':erp@');
     expect(md).toContain('Test CPU');
+    // The report states the proof was at the HTTP API, not the raw query layer.
+    expect(md).toContain('http://localhost:3000');
+    expect(md).toContain('HTTP API');
   });
 
   it('reports FAIL when an endpoint exceeds the 2-second budget', () => {

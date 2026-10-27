@@ -4,26 +4,32 @@ import { type LatencySummary, summarizeLatencies } from './load-metrics.js';
 
 /**
  * The load driver (NFR-05, ticket #20, AC2). It drives `users` simulated concurrent users against
- * the two read endpoints the target names — search (`GET /products`) and stock-view
- * (`GET /stock/balances`) — for `durationMs`, timing every request. It issues exactly the queries
- * the API controllers issue (same `where`/`orderBy`/`select` shape), so the latency it measures is
- * the endpoints' own database work, isolated from HTTP and auth.
+ * the two read endpoints the target names — search and stock-view — for `durationMs`, timing every
+ * request.
+ *
+ * The driver knows only how to drive concurrency and time requests; the two operations are
+ * injected. This is what lets the proof happen at the right layer: the `load:report` script injects
+ * operations that call the real HTTP APIs (`GET /products`, `GET /stock/balances`) so the measured
+ * p95 is the API-level response time the target is about, while the integration spec injects
+ * `prismaReadOperations` to prove the mechanism quickly without starting a server.
  *
  * CSV export is excluded from the target (ticket #20), so it is not driven here.
  */
 
-/** What the driver needs from a Prisma client: the two read queries, nothing else. */
-type PrismaLike = Pick<PrismaClient, 'product' | 'stockBalance'>;
+/** One request an iteration drives. Both operations take the iteration index so each can vary its input. */
+export interface LoadOperations {
+  /** Drive one search request (the catalogue search API, `GET /products`). */
+  search: (iteration: number) => Promise<unknown>;
+  /** Drive one stock-view request (the balances API, `GET /stock/balances`). */
+  stockView: (iteration: number) => Promise<unknown>;
+}
 
 export interface RunLoadOptions {
-  /** The seeded world to read against (its store is the stock-view target). */
-  seed: LoadSeed;
+  operations: LoadOperations;
   /** How many simulated concurrent users. */
   users: number;
   /** How long to drive load, in milliseconds. */
   durationMs: number;
-  /** A few search terms to rotate through; defaults to realistic catalogue substrings. */
-  searchTerms?: readonly string[];
   /** The clock, injectable for tests. Defaults to `Date.now`. */
   now?: () => number;
 }
@@ -35,31 +41,20 @@ export interface RunLoadResult {
   stockView: LatencySummary;
 }
 
-const DEFAULT_SEARCH_TERMS = [
-  'Load',
-  'Product',
-  'LOAD-SKU-0001',
-  'Beverages',
-  'Household',
-] as const;
-
-/** One timed query: run it, return how many milliseconds it took. */
-async function timed(now: () => number, query: () => Promise<unknown>): Promise<number> {
+/** One timed call: run it, return how many milliseconds it took. */
+async function timed(now: () => number, call: () => Promise<unknown>): Promise<number> {
   const start = now();
-  await query();
+  await call();
   return now() - start;
 }
 
 /**
  * Drive the load. Each user runs its own loop until the deadline, alternating a search and a
- * stock-view read, appending each request's latency to the shared per-endpoint arrays. The reads
- * mirror the controllers: search is an OR over SKU/name with a case-insensitive `contains` ordered
- * by SKU; stock-view lists the store's balances.
+ * stock-view request, appending each request's latency to the shared per-endpoint arrays.
  */
-export async function runLoad(prisma: PrismaLike, options: RunLoadOptions): Promise<RunLoadResult> {
-  const { seed, users, durationMs } = options;
+export async function runLoad(options: RunLoadOptions): Promise<RunLoadResult> {
+  const { operations, users, durationMs } = options;
   const now = options.now ?? Date.now;
-  const searchTerms = options.searchTerms ?? DEFAULT_SEARCH_TERMS;
 
   const searchLatencies: number[] = [];
   const stockViewLatencies: number[] = [];
@@ -69,29 +64,9 @@ export async function runLoad(prisma: PrismaLike, options: RunLoadOptions): Prom
     let iteration = 0;
     // Guarantee at least one request of each kind per user, then keep going until the deadline.
     do {
-      const term = searchTerms[(userIndex + iteration) % searchTerms.length]!;
-      searchLatencies.push(
-        await timed(now, () =>
-          prisma.product.findMany({
-            where: {
-              OR: [
-                { sku: { contains: term, mode: 'insensitive' as const } },
-                { name: { contains: term, mode: 'insensitive' as const } },
-              ],
-            },
-            orderBy: { sku: 'asc' },
-            select: { id: true, sku: true, name: true, sellingPriceMinor: true, active: true },
-          }),
-        ),
-      );
-      stockViewLatencies.push(
-        await timed(now, () =>
-          prisma.stockBalance.findMany({
-            where: { storeId: seed.storeId },
-            select: { storeId: true, productId: true, quantity: true },
-          }),
-        ),
-      );
+      const seq = userIndex + iteration;
+      searchLatencies.push(await timed(now, () => operations.search(seq)));
+      stockViewLatencies.push(await timed(now, () => operations.stockView(seq)));
       iteration++;
     } while (now() < deadline);
   };
@@ -103,5 +78,50 @@ export async function runLoad(prisma: PrismaLike, options: RunLoadOptions): Prom
     durationMs,
     search: summarizeLatencies(searchLatencies),
     stockView: summarizeLatencies(stockViewLatencies),
+  };
+}
+
+/** What `prismaReadOperations` needs from a Prisma client. */
+type PrismaLike = Pick<PrismaClient, 'product' | 'stockBalance'>;
+
+/** The search terms the query-layer probe rotates through, including the empty (full-scan) case. */
+const PROBE_SEARCH_TERMS = ['Load', 'Beverages', 'LOAD-SKU-00001', '', 'Household'] as const;
+
+/**
+ * Operations that drive the query layer directly, issuing exactly the queries the controllers
+ * issue: search is the OR over SKU/name with a case-insensitive `contains` ordered by SKU, with the
+ * empty-term iteration exercising the controller's no-query full-scan path; stock-view lists the
+ * store's balances. Used by the integration spec to prove the driver mechanism without a server.
+ * The faithful API-level proof (through HTTP) lives in the `load:report` script.
+ */
+export function prismaReadOperations(prisma: PrismaLike, seed: LoadSeed): LoadOperations {
+  const PRODUCT_SELECT = {
+    id: true,
+    sku: true,
+    name: true,
+    sellingPriceMinor: true,
+    active: true,
+  } as const;
+  return {
+    search: (iteration) => {
+      const term = PROBE_SEARCH_TERMS[iteration % PROBE_SEARCH_TERMS.length]!;
+      return prisma.product.findMany({
+        where: term
+          ? {
+              OR: [
+                { sku: { contains: term, mode: 'insensitive' as const } },
+                { name: { contains: term, mode: 'insensitive' as const } },
+              ],
+            }
+          : {},
+        orderBy: { sku: 'asc' },
+        select: PRODUCT_SELECT,
+      });
+    },
+    stockView: () =>
+      prisma.stockBalance.findMany({
+        where: { storeId: seed.storeId },
+        select: { storeId: true, productId: true, quantity: true },
+      }),
   };
 }

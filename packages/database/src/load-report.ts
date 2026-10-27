@@ -15,6 +15,8 @@ export interface ReportEnvironment {
   label: string;
   /** The database the run targeted, with any credentials stripped. */
   databaseUrl: string;
+  /** The API base URL the HTTP probe drove. */
+  apiUrl: string;
   /** The dataset size the seed produced. */
   dataset: { products: number; movements: number };
   /** When the run finished (ISO). */
@@ -95,6 +97,8 @@ export function renderReport(
 
 ## Latency by endpoint
 
+Measured at the HTTP API (\`${environment.apiUrl}/api\`): each request is a real call through oRPC, the auth guard and JSON serialization, not a direct database query.
+
 | Endpoint | Requests | min | mean | p95 | max | Verdict |
 | --- | --- | --- | --- | --- | --- | --- |
 ${endpointRow('Search (GET /products)', result.search)}
@@ -103,6 +107,7 @@ ${endpointRow('Stock-view (GET /stock/balances)', result.stockView)}
 ## Environment (for RetailOne approval)
 
 - Environment: ${environment.label}
+- API: ${environment.apiUrl}
 - Database: \`${redactDatabaseUrl(environment.databaseUrl)}\`
 - Run finished: ${environment.ranAt}
 

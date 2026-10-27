@@ -12,16 +12,19 @@
 
 ## Latency by endpoint
 
-| Endpoint                         | Requests | min  | mean | p95       | max   | Verdict          |
-| -------------------------------- | -------- | ---- | ---- | --------- | ----- | ---------------- |
-| Search (GET /products)           | 280066   | 0 ms | 5 ms | **10 ms** | 69 ms | ✅ within budget |
-| Stock-view (GET /stock/balances) | 280066   | 1 ms | 5 ms | **9 ms**  | 68 ms | ✅ within budget |
+Measured at the HTTP API (`http://localhost:3100/api`): each request is a real call through oRPC, the auth guard and JSON serialization, not a direct database query.
+
+| Endpoint                         | Requests | min  | mean  | p95       | max   | Verdict          |
+| -------------------------------- | -------- | ---- | ----- | --------- | ----- | ---------------- |
+| Search (GET /products)           | 152252   | 2 ms | 10 ms | **15 ms** | 80 ms | ✅ within budget |
+| Stock-view (GET /stock/balances) | 152252   | 3 ms | 10 ms | **13 ms** | 72 ms | ✅ within budget |
 
 ## Environment (for RetailOne approval)
 
-- Environment: Docker Postgres 18 (compose) on the author machine — Apple M5, 10 cores, 16 GB; API query layer measured directly (no HTTP), recorded for RetailOne to approve the environment before UAT
+- Environment: Docker Postgres 18 (compose) + API over HTTP on the author machine — Apple M5, 10 cores, 16 GB. Recorded for RetailOne to approve the environment before UAT.
+- API: http://localhost:3100
 - Database: `postgresql://erp:***@localhost:5432/erp_load`
-- Run finished: 2026-10-27T08:38:11.414Z
+- Run finished: 2026-10-27T08:51:44.611Z
 
 ## Machine
 
