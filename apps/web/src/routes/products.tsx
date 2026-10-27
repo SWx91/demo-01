@@ -20,10 +20,20 @@ type ProductForm = {
 
 const EMPTY_FORM: ProductForm = { sku: '', name: '', category: '', unit: '', priceBaht: '' };
 
-/** Convert a baht amount (e.g. "125.00") to integer minor units (satang): 12500. NaN on bad input. */
-function bahtToMinorUnits(baht: string): number {
-  return Math.round(Number(baht) * 100);
+/** Convert a baht amount (e.g. "125.00") to integer minor units (satang): 12500. */
+function bahtToMinorUnits(baht: number): number {
+  return Math.round(baht * 100);
 }
+
+/** Parse a baht string to a finite number, or null when blank or not a number. */
+function parseBaht(baht: string): number | null {
+  const trimmed = baht.trim();
+  if (trimmed === '') return null;
+  const value = Number(trimmed);
+  return Number.isFinite(value) ? value : null;
+}
+
+const INVALID_PRICE_MESSAGE = 'กรุณากรอกราคาขายให้ถูกต้อง';
 
 /** Administrator-only screen to create products. SKU is unique across the organization. */
 export function ProductsPage() {
@@ -44,6 +54,7 @@ export function ProductsPage() {
 
 function ProductForm() {
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
+  const [priceError, setPriceError] = useState<string | null>(null);
 
   const create = useMutation(
     orpc.products.create.mutationOptions({
@@ -64,12 +75,18 @@ function ProductForm() {
           className="flex flex-wrap items-end gap-3"
           onSubmit={(event) => {
             event.preventDefault();
+            const baht = parseBaht(form.priceBaht);
+            if (baht === null) {
+              setPriceError(INVALID_PRICE_MESSAGE);
+              return;
+            }
+            setPriceError(null);
             const input: CreateProductInput = {
               sku: form.sku,
               name: form.name,
               category: form.category,
               unit: form.unit,
-              sellingPriceMinor: bahtToMinorUnits(form.priceBaht),
+              sellingPriceMinor: bahtToMinorUnits(baht),
               active: true,
             };
             create.mutate(input);
@@ -110,10 +127,16 @@ function ProductForm() {
               บันทึกสินค้าเรียบร้อยแล้ว
             </p>
           )}
-          {create.isError && (
+          {priceError ? (
             <p role="alert" className="w-full text-destructive">
-              {createErrorMessage(create.error)}
+              {priceError}
             </p>
+          ) : (
+            create.isError && (
+              <p role="alert" className="w-full text-destructive">
+                {createErrorMessage(create.error)}
+              </p>
+            )
           )}
         </form>
       </CardContent>

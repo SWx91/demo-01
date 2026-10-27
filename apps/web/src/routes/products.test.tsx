@@ -136,4 +136,37 @@ describe('ProductsPage', () => {
     expect(alert).toHaveTextContent('ไม่สามารถบันทึกสินค้าได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่');
     expect(alert).not.toHaveTextContent('boom at line 42');
   });
+
+  it('rejects a blank price in Thai without calling the API', async () => {
+    const fetch = mockApi({ 'GET /auth/me': { user: administrator } });
+
+    renderPage();
+    // Fill everything except the price.
+    fireEvent.change(await screen.findByLabelText('รหัสสินค้า (SKU)'), {
+      target: { value: 'SKU001' },
+    });
+    fireEvent.change(screen.getByLabelText('ชื่อสินค้า'), {
+      target: { value: 'Jasmine Rice 5kg' },
+    });
+    fireEvent.change(screen.getByLabelText('หมวดหมู่'), { target: { value: 'Groceries' } });
+    fireEvent.change(screen.getByLabelText('หน่วยนับ'), { target: { value: 'bag' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('กรุณากรอกราคาขายให้ถูกต้อง');
+    const postCall = fetch.mock.calls.find(([request]) => request.method === 'POST');
+    expect(postCall).toBeUndefined();
+  });
+
+  it('rejects a non-numeric price in Thai without calling the API', async () => {
+    const fetch = mockApi({ 'GET /auth/me': { user: administrator } });
+
+    renderPage();
+    await fillForm();
+    fireEvent.change(screen.getByLabelText('ราคาขาย (บาท)'), { target: { value: 'abc' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('กรุณากรอกราคาขายให้ถูกต้อง');
+    const postCall = fetch.mock.calls.find(([request]) => request.method === 'POST');
+    expect(postCall).toBeUndefined();
+  });
 });
