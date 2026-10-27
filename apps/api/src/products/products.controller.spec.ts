@@ -145,4 +145,68 @@ describe('ProductsController', () => {
       'ADMINISTRATOR',
     ]);
   });
+
+  it('deactivates a product by id, keeping it in the catalogue', async () => {
+    const deactivated = { id: 'prod3', ...input, sku: 'SKU003', active: false };
+    const update = vi.fn().mockResolvedValue(deactivated);
+    const controller = await createController({ update });
+
+    await expect(call(controller.setActive(), { id: 'prod3', active: false })).resolves.toEqual(
+      deactivated,
+    );
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'prod3' },
+      data: { active: false },
+      select: PRODUCT_SELECT,
+    });
+  });
+
+  it('reactivates a product by id', async () => {
+    const reactivated = { id: 'prod3', ...input, sku: 'SKU003', active: true };
+    const update = vi.fn().mockResolvedValue(reactivated);
+    const controller = await createController({ update });
+
+    await expect(call(controller.setActive(), { id: 'prod3', active: true })).resolves.toEqual(
+      reactivated,
+    );
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'prod3' },
+      data: { active: true },
+      select: PRODUCT_SELECT,
+    });
+  });
+
+  it('restricts deactivate/reactivate to an Administrator', () => {
+    const reflector = new Reflector();
+    expect(reflector.get(ROLES_KEY, ProductsController.prototype.setActive)).toEqual([
+      'ADMINISTRATOR',
+    ]);
+  });
+
+  it('historical search returns inactive products too (deactivated SKU003 still found)', async () => {
+    // activeOnly defaults to false, so a historical search must not filter on active status.
+    const deactivated = {
+      id: 'prod3',
+      ...input,
+      sku: 'SKU003',
+      name: 'Laundry detergent',
+      active: false,
+    };
+    const findMany = vi.fn().mockResolvedValue([deactivated]);
+    const controller = await createController({ findMany });
+
+    await expect(call(controller.search(), { query: 'SKU003' })).resolves.toEqual([deactivated]);
+    const where = findMany.mock.calls[0]?.[0].where;
+    // The query filters by text but never constrains `active` on a historical search.
+    expect(where.active).toBeUndefined();
+  });
+
+  it('a picker search (activeOnly) constrains to active products only', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const controller = await createController({ findMany });
+
+    await call(controller.search(), { query: 'rice', activeOnly: true });
+
+    expect(findMany.mock.calls[0]?.[0].where.active).toBe(true);
+  });
 });

@@ -54,4 +54,42 @@ export class ProductsController {
       return this.prisma.product.update({ where: { id }, data, select: PRODUCT_SELECT });
     });
   }
+
+  @Roles('ADMINISTRATOR')
+  @Implement(contract.products.setActive)
+  setActive() {
+    // Deactivating keeps the product in the catalogue and searchable (MD-02); it only stops the
+    // product from being added to new documents, enforced by the shared `assertProductActive`
+    // guard. Reactivating lets it be added again.
+    return implement(contract.products.setActive).handler(({ input }) =>
+      this.prisma.product.update({
+        where: { id: input.id },
+        data: { active: input.active },
+        select: PRODUCT_SELECT,
+      }),
+    );
+  }
+
+  @Implement(contract.products.search)
+  search() {
+    return implement(contract.products.search).handler(({ input }) =>
+      this.prisma.product.findMany({
+        where: {
+          // activeOnly defaults to false so historical searches still surface deactivated
+          // products (MD-02). Only a picker for a new document sets activeOnly to hide them.
+          ...(input.activeOnly ? { active: true } : {}),
+          ...(input.query
+            ? {
+                OR: [
+                  { sku: { contains: input.query, mode: 'insensitive' as const } },
+                  { name: { contains: input.query, mode: 'insensitive' as const } },
+                ],
+              }
+            : {}),
+        },
+        orderBy: { sku: 'asc' },
+        select: PRODUCT_SELECT,
+      }),
+    );
+  }
 }
