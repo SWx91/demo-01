@@ -1,6 +1,8 @@
 import { Test } from '@nestjs/testing';
+import { Reflector } from '@nestjs/core';
 import { call } from '@orpc/server';
 import { describe, expect, it, vi } from 'vitest';
+import { ROLES_KEY } from '../auth/auth.decorators.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { ProductsController } from './products.controller.js';
 
@@ -81,5 +83,14 @@ describe('ProductsController', () => {
       call(controller.create(), { ...input, sellingPriceMinor: 123.45 }),
     ).rejects.toThrow();
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it('restricts create to an Administrator (non-admins rejected by the guard)', () => {
+    // The guard enforces this at request time; here we assert the route carries the
+    // ADMINISTRATOR requirement so a non-administrator is refused before any data change.
+    const reflector = new Reflector();
+    expect(reflector.get(ROLES_KEY, ProductsController.prototype.create)).toEqual([
+      'ADMINISTRATOR',
+    ]);
   });
 });
