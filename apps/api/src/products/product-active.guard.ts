@@ -1,11 +1,8 @@
+import type { Product } from '@erp/contracts';
 import { ORPCError } from '@orpc/nest';
 
-/** The fields the guard needs to identify and check a product. */
-type ActiveCheckProduct = {
-  sku: string;
-  name: string;
-  active: boolean;
-};
+/** The product fields the guard needs to identify and check a product, derived from the contract. */
+type ActiveCheckProduct = Pick<Product, 'sku' | 'name' | 'active'>;
 
 /**
  * The shared rule that keeps a deactivated product out of new documents (US-07). A deactivated
