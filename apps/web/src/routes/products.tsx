@@ -40,30 +40,40 @@ function parseBaht(baht: string): number | null {
 
 const INVALID_PRICE_MESSAGE = 'กรุณากรอกราคาขายให้ถูกต้อง';
 
-/** Administrator-only screen to create products. SKU is unique across the organization. */
+/** Administrator-only screen to create products, then edit the one just created. SKU is unique across the organization. */
 export function ProductsPage() {
   const user = useCurrentUser();
   const isAdmin = user?.role === 'ADMINISTRATOR';
+  const [editing, setEditing] = useState<Product | null>(null);
+
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">สินค้า</h1>
+        <p className="text-muted-foreground">เฉพาะผู้ดูแลระบบเท่านั้นที่สร้างสินค้าได้</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">สินค้า</h1>
-      {isAdmin ? (
-        <ProductForm />
-      ) : (
-        <p className="text-muted-foreground">เฉพาะผู้ดูแลระบบเท่านั้นที่สร้างสินค้าได้</p>
-      )}
+      <ProductForm onCreated={setEditing} />
+      {editing && <ProductEditForm key={editing.id} product={editing} />}
     </div>
   );
 }
 
-function ProductForm() {
+function ProductForm({ onCreated }: { onCreated: (product: Product) => void }) {
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
   const [priceError, setPriceError] = useState<string | null>(null);
 
   const create = useMutation(
     orpc.products.create.mutationOptions({
-      onSuccess: () => setForm(EMPTY_FORM),
+      onSuccess: (product) => {
+        setForm(EMPTY_FORM);
+        onCreated(product);
+      },
     }),
   );
 

@@ -169,6 +169,31 @@ describe('ProductsPage', () => {
     const postCall = fetch.mock.calls.find(([request]) => request.method === 'POST');
     expect(postCall).toBeUndefined();
   });
+
+  it('reveals a reachable edit screen for the product just created', async () => {
+    mockApi({
+      'GET /auth/me': { user: administrator },
+      'POST /products': {
+        id: 'prod1',
+        sku: 'SKU001',
+        name: 'Jasmine Rice 5kg',
+        category: 'Groceries',
+        unit: 'bag',
+        sellingPriceMinor: 12500,
+        active: true,
+      },
+    });
+
+    renderPage();
+    await fillForm();
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+
+    // After a successful create the edit screen appears, prefilled with the new product.
+    expect(await screen.findByText('แก้ไขสินค้า')).toBeInTheDocument();
+    expect(screen.getByLabelText('ชื่อสินค้า', { selector: '#edit-product-name' })).toHaveValue(
+      'Jasmine Rice 5kg',
+    );
+  });
 });
 
 const existingProduct = {
