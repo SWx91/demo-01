@@ -141,9 +141,12 @@ async function main() {
       update: { reorderThreshold: REORDER_THRESHOLD },
       create: { storeId, productId, reorderThreshold: REORDER_THRESHOLD },
     });
+    // Only set the opening balance when the row is first created. Re-running the seed must never
+    // clobber a live balance that stock movements have since changed (US-14: balance = opening +
+    // successful movements). An empty `update` leaves an existing balance exactly as it is.
     await prisma.stockBalance.upsert({
       where: { storeId_productId: { storeId, productId } },
-      update: { quantity },
+      update: {},
       create: { storeId, productId, quantity },
     });
   }

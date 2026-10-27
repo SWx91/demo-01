@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import type { User } from '@erp/contracts';
 import * as database from '@erp/database';
+import { ORPCError } from '@orpc/nest';
 import { call } from '@orpc/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ROLES_KEY } from '../auth/auth.decorators.js';
@@ -115,6 +116,59 @@ describe('StockController', () => {
       ),
     ).rejects.toThrow();
     expect(post).not.toHaveBeenCalled();
+  });
+
+  it('maps a balance-would-go-negative rejection to a CONFLICT, not a 500', async () => {
+    // The real shape Prisma 7 throws for a CHECK violation: a wrapper with the Postgres SQLSTATE
+    // nested under meta.driverAdapterError.cause.code.
+    const checkViolation = Object.assign(new Error('check constraint'), {
+      code: 'P2039',
+      meta: { driverAdapterError: { cause: { code: '23514' } } },
+    });
+    vi.spyOn(database, 'postStockMovement').mockRejectedValue(checkViolation);
+    const controller = await createController({});
+
+    try {
+      await call(
+        controller.post(actor),
+        {
+          storeId: 'store-b01',
+          productId: 'prod1',
+          quantityChange: -999,
+          movementType: 'SALE',
+          sourceDocument: 'SO-1',
+        },
+        { context: {} },
+      );
+      expect.unreachable('expected the posting to be rejected');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ORPCError);
+      expect((error as ORPCError<string, unknown>).code).toBe('CONFLICT');
+    }
+  });
+
+  it('maps a concurrent-update rejection to a CONFLICT, not a 500', async () => {
+    const concurrent = new Error('Concurrent stock update detected; the balance changed');
+    vi.spyOn(database, 'postStockMovement').mockRejectedValue(concurrent);
+    const controller = await createController({});
+
+    try {
+      await call(
+        controller.post(actor),
+        {
+          storeId: 'store-b01',
+          productId: 'prod1',
+          quantityChange: 1,
+          movementType: 'RECEIPT',
+          sourceDocument: 'PO-1',
+        },
+        { context: {} },
+      );
+      expect.unreachable('expected the posting to be rejected');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ORPCError);
+      expect((error as ORPCError<string, unknown>).code).toBe('CONFLICT');
+    }
   });
 
   it('exposes no route to edit or delete a movement (confirmed movements are immutable)', () => {

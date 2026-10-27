@@ -71,6 +71,21 @@ describe('postStockMovement (Postgres integration)', () => {
       where: { storeId_productId: { storeId, productId } },
     });
     expect(balance.quantity).toBe(18);
+
+    // The persisted movement row records every field the ticket requires: product, store, quantity
+    // change, balance before and after, movement type, source document, actor and a timestamp.
+    const persisted = await prisma.stockMovement.findUniqueOrThrow({ where: { id: movement.id } });
+    expect(persisted).toMatchObject({
+      storeId,
+      productId,
+      quantityChange: 8,
+      balanceBefore: 10,
+      balanceAfter: 18,
+      movementType: 'RECEIPT',
+      sourceDocument: 'PO-1',
+      actorId,
+    });
+    expect(persisted.createdAt).toBeInstanceOf(Date);
     expect(await prisma.stockMovement.count({ where: { storeId, productId } })).toBe(1);
   });
 
@@ -177,5 +192,32 @@ describe('postStockMovement (Postgres integration)', () => {
     });
 
     await expect(prisma.stockMovement.delete({ where: { id: movement.id } })).rejects.toThrow();
+  });
+});
+
+// AC-6: opening balances are seeded and observable by reading balances. This asserts the values
+// the seed writes (packages/database/prisma/seed.ts). CI runs `db:seed` before the integration
+// specs; run `pnpm db:seed` locally first if these fail.
+describe('seeded opening balances (AC-6)', () => {
+  async function balance(storeCode: string, sku: string): Promise<number | undefined> {
+    const store = await prisma.store.findUnique({ where: { code: storeCode } });
+    const product = await prisma.product.findUnique({ where: { sku } });
+    if (!store || !product) return undefined;
+    const row = await prisma.stockBalance.findUnique({
+      where: { storeId_productId: { storeId: store.id, productId: product.id } },
+    });
+    return row?.quantity;
+  }
+
+  it('seeds B01 with SKU001=10, SKU002=5, SKU003=0', async () => {
+    expect(await balance('B01', 'SKU001')).toBe(10);
+    expect(await balance('B01', 'SKU002')).toBe(5);
+    expect(await balance('B01', 'SKU003')).toBe(0);
+  });
+
+  it('seeds every B02 balance at zero', async () => {
+    expect(await balance('B02', 'SKU001')).toBe(0);
+    expect(await balance('B02', 'SKU002')).toBe(0);
+    expect(await balance('B02', 'SKU003')).toBe(0);
   });
 });

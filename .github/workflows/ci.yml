@@ -84,6 +84,10 @@ jobs:
       - name: Migrate, generate and seed
         run: pnpm db:deploy && pnpm db:generate && pnpm db:seed
 
+      # The Postgres integration specs run here, where a database exists (the `check` job has none).
+      - name: Postgres integration specs
+        run: pnpm --filter @erp/database test:integration
+
       # Builds the API and the web app, then Playwright starts both and runs apps/e2e/tests.
       - run: pnpm e2e
 

@@ -38,8 +38,8 @@ test.describe('stock balances and movements', () => {
     expect(productRes.ok(), `create product returned ${productRes.status()}`).toBeTruthy();
     const product = await productRes.json();
 
-    // Seed an opening balance of 10 through a RECEIPT (the mechanism the seed and every stock
-    // change use). The movement records the balance before (0) and after (10).
+    // Set an opening balance of 10 through an OPENING movement (the mechanism every stock change
+    // uses). The movement records the balance before (0) and after (10).
     const opening = await request.post('/api/stock/movements', {
       data: {
         storeId: store.id,
@@ -77,7 +77,8 @@ test.describe('stock balances and movements', () => {
     expect(saleMovement.balanceBefore).toBe(10);
     expect(saleMovement.balanceAfter).toBe(6);
 
-    // A balance can never be driven below zero: withdrawing 7 from 6 is rejected...
+    // A balance can never be driven below zero: withdrawing 7 from 6 is rejected with a 409
+    // Conflict (an actionable business failure), not a 500...
     const overdraw = await request.post('/api/stock/movements', {
       data: {
         storeId: store.id,
@@ -87,7 +88,7 @@ test.describe('stock balances and movements', () => {
         sourceDocument: `SO-OVER-${suffix}`,
       },
     });
-    expect(overdraw.ok(), 'driving the balance below zero must be rejected').toBeFalsy();
+    expect(overdraw.status(), 'driving the balance below zero must be a 409 Conflict').toBe(409);
 
     // ...and the balance is unchanged at 6.
     const afterRes = await request.get('/api/stock/balances', {
