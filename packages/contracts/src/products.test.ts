@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CreateProductSchema, ProductSchema, QuantitySchema } from './products.js';
+import {
+  CreateProductSchema,
+  ProductSchema,
+  QuantitySchema,
+  UpdateProductSchema,
+} from './products.js';
 
 const validProduct = {
   id: 'prod1',
@@ -99,5 +104,45 @@ describe('QuantitySchema', () => {
 
   it('rejects a negative quantity', () => {
     expect(QuantitySchema.safeParse(-1).success).toBe(false);
+  });
+});
+
+describe('UpdateProductSchema', () => {
+  const validUpdate = {
+    id: 'prod1',
+    name: 'Jasmine Rice 5kg',
+    category: 'Groceries',
+    unit: 'bag',
+    sellingPriceMinor: 12500,
+    active: true,
+  };
+
+  it('accepts an id plus the mutable fields', () => {
+    expect(UpdateProductSchema.safeParse(validUpdate).success).toBe(true);
+  });
+
+  it('does not carry the SKU (edited by a later immutability ticket)', () => {
+    const result = UpdateProductSchema.safeParse({ ...validUpdate, sku: 'SKU-999' });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect('sku' in result.data).toBe(false);
+    }
+  });
+
+  it('rejects a missing id', () => {
+    const { id, ...withoutId } = validUpdate;
+    void id;
+    expect(UpdateProductSchema.safeParse(withoutId).success).toBe(false);
+  });
+
+  it('rejects a negative selling price', () => {
+    expect(UpdateProductSchema.safeParse({ ...validUpdate, sellingPriceMinor: -1 }).success).toBe(
+      false,
+    );
+  });
+
+  it('rejects an empty name', () => {
+    expect(UpdateProductSchema.safeParse({ ...validUpdate, name: '' }).success).toBe(false);
   });
 });

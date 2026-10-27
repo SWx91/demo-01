@@ -44,6 +44,20 @@ export const CreateProductSchema = z.object({
 });
 export type CreateProductInput = z.infer<typeof CreateProductSchema>;
 
+/**
+ * Editing a product: the id plus the mutable fields. The SKU is deliberately absent — it is
+ * immutable here and handled by a later immutability ticket. Same Thai validation as create.
+ */
+export const UpdateProductSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1, 'กรุณากรอกชื่อสินค้า'),
+  category: z.string().trim().min(1, 'กรุณากรอกหมวดหมู่สินค้า'),
+  unit: z.string().trim().min(1, 'กรุณากรอกหน่วยนับ'),
+  sellingPriceMinor: SellingPriceMinorSchema,
+  active: z.boolean().default(true),
+});
+export type UpdateProductInput = z.infer<typeof UpdateProductSchema>;
+
 export const productsContract = {
   create: oc
     .route({
@@ -53,5 +67,14 @@ export const productsContract = {
       tags: ['Products'],
     })
     .input(CreateProductSchema)
+    .output(ProductSchema),
+  update: oc
+    .route({
+      method: 'PUT',
+      path: '/products/{id}',
+      summary: 'Edit a product (mutable fields; SKU is immutable)',
+      tags: ['Products'],
+    })
+    .input(UpdateProductSchema)
     .output(ProductSchema),
 };
