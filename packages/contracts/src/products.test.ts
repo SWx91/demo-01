@@ -112,6 +112,7 @@ describe('QuantitySchema', () => {
 describe('UpdateProductSchema', () => {
   const validUpdate = {
     id: 'prod1',
+    sku: 'SKU-001',
     name: 'Jasmine Rice 5kg',
     category: 'Groceries',
     unit: 'bag',
@@ -119,17 +120,26 @@ describe('UpdateProductSchema', () => {
     active: true,
   };
 
-  it('accepts an id plus the mutable fields', () => {
-    expect(UpdateProductSchema.safeParse(validUpdate).success).toBe(true);
+  it('accepts an id plus the SKU and the mutable fields', () => {
+    const result = UpdateProductSchema.safeParse(validUpdate);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.sku).toBe('SKU-001');
+    }
   });
 
-  it('does not carry the SKU (edited by a later immutability ticket)', () => {
+  it('accepts a corrected SKU (MD-01: only frozen once a movement references the product)', () => {
     const result = UpdateProductSchema.safeParse({ ...validUpdate, sku: 'SKU-999' });
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect('sku' in result.data).toBe(false);
+      expect(result.data.sku).toBe('SKU-999');
     }
+  });
+
+  it('rejects an empty sku', () => {
+    expect(UpdateProductSchema.safeParse({ ...validUpdate, sku: '' }).success).toBe(false);
   });
 
   it('rejects a missing id', () => {

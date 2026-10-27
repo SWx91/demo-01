@@ -6,10 +6,13 @@ import { ROLES_KEY } from '../auth/auth.decorators.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { ProductsController } from './products.controller.js';
 
-async function createController(product: Record<string, unknown>) {
+async function createController(
+  product: Record<string, unknown>,
+  rest: Record<string, Record<string, unknown>> = {},
+) {
   const moduleRef = await Test.createTestingModule({
     controllers: [ProductsController],
-    providers: [{ provide: PrismaService, useValue: { product } }],
+    providers: [{ provide: PrismaService, useValue: { product, ...rest } }],
   }).compile();
   return moduleRef.get(ProductsController);
 }
@@ -94,14 +97,26 @@ describe('ProductsController', () => {
     ]);
   });
 
-  it('edits a product, updating the mutable fields by id', async () => {
-    const updated = { id: 'prod1', ...input, name: 'Jasmine Rice 10kg', sellingPriceMinor: 24000 };
+  it('edits a product, updating the SKU and the mutable fields by id (AC1: no movement yet)', async () => {
+    const updated = {
+      id: 'prod1',
+      ...input,
+      sku: 'SKU-002',
+      name: 'Jasmine Rice 10kg',
+      sellingPriceMinor: 24000,
+    };
     const update = vi.fn().mockResolvedValue(updated);
-    const controller = await createController({ update });
+    const findUniqueOrThrow = vi.fn().mockResolvedValue({ sku: 'SKU-001' });
+    const count = vi.fn().mockResolvedValue(0);
+    const controller = await createController(
+      { update, findUniqueOrThrow },
+      { stockMovement: { count } },
+    );
 
     await expect(
       call(controller.update(), {
         id: 'prod1',
+        sku: 'SKU-002',
         name: 'Jasmine Rice 10kg',
         category: 'Groceries',
         unit: 'bag',
@@ -109,9 +124,11 @@ describe('ProductsController', () => {
         active: true,
       }),
     ).resolves.toEqual(updated);
+    expect(count).toHaveBeenCalledWith({ where: { productId: 'prod1' } });
     expect(update).toHaveBeenCalledWith({
       where: { id: 'prod1' },
       data: {
+        sku: 'SKU-002',
         name: 'Jasmine Rice 10kg',
         category: 'Groceries',
         unit: 'bag',
@@ -122,13 +139,99 @@ describe('ProductsController', () => {
     });
   });
 
-  it('rejects a negative selling price on edit before reaching Prisma', async () => {
+  it('rejects changing the SKU once a movement references the product, with a Thai CONFLICT (AC2)', async () => {
     const update = vi.fn();
-    const controller = await createController({ update });
+    const findUniqueOrThrow = vi.fn().mockResolvedValue({ sku: 'SKU-001' });
+    const count = vi.fn().mockResolvedValue(1);
+    const controller = await createController(
+      { update, findUniqueOrThrow },
+      { stockMovement: { count } },
+    );
 
     await expect(
       call(controller.update(), {
         id: 'prod1',
+        sku: 'SKU-999',
+        name: 'Jasmine Rice 5kg',
+        category: 'Groceries',
+        unit: 'bag',
+        sellingPriceMinor: 12500,
+        active: true,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT', message: expect.stringContaining('SKU-001') });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('leaves other fields editable once the SKU is frozen, as long as the SKU is unchanged (AC3)', async () => {
+    const updated = { id: 'prod1', ...input, sku: 'SKU-001', name: 'Jasmine Rice 10kg' };
+    const update = vi.fn().mockResolvedValue(updated);
+    const findUniqueOrThrow = vi.fn().mockResolvedValue({ sku: 'SKU-001' });
+    const count = vi.fn().mockResolvedValue(1);
+    const controller = await createController(
+      { update, findUniqueOrThrow },
+      { stockMovement: { count } },
+    );
+
+    await expect(
+      call(controller.update(), {
+        id: 'prod1',
+        sku: 'SKU-001',
+        name: 'Jasmine Rice 10kg',
+        category: 'Groceries',
+        unit: 'bag',
+        sellingPriceMinor: 12500,
+        active: true,
+      }),
+    ).resolves.toEqual(updated);
+    // The SKU never changed, so the movement count is never even consulted.
+    expect(count).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'prod1' },
+      data: {
+        sku: 'SKU-001',
+        name: 'Jasmine Rice 10kg',
+        category: 'Groceries',
+        unit: 'bag',
+        sellingPriceMinor: 12500,
+        active: true,
+      },
+      select: PRODUCT_SELECT,
+    });
+  });
+
+  it('rejects an edit whose new SKU collides with another product, with a Thai CONFLICT', async () => {
+    const update = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
+    const findUniqueOrThrow = vi.fn().mockResolvedValue({ sku: 'SKU-001' });
+    const count = vi.fn().mockResolvedValue(0);
+    const controller = await createController(
+      { update, findUniqueOrThrow },
+      { stockMovement: { count } },
+    );
+
+    await expect(
+      call(controller.update(), {
+        id: 'prod1',
+        sku: 'SKU-002',
+        name: 'Jasmine Rice 5kg',
+        category: 'Groceries',
+        unit: 'bag',
+        sellingPriceMinor: 12500,
+        active: true,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('rejects a negative selling price on edit before reaching Prisma', async () => {
+    const update = vi.fn();
+    const findUniqueOrThrow = vi.fn();
+    const controller = await createController({ update, findUniqueOrThrow });
+
+    await expect(
+      call(controller.update(), {
+        id: 'prod1',
+        sku: 'SKU-001',
         name: 'Jasmine Rice 5kg',
         category: 'Groceries',
         unit: 'bag',
@@ -136,6 +239,7 @@ describe('ProductsController', () => {
         active: true,
       }),
     ).rejects.toThrow();
+    expect(findUniqueOrThrow).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
   });
 

@@ -190,9 +190,7 @@ describe('ProductsPage', () => {
 
     // After a successful create the edit screen appears, prefilled with the new product.
     expect(await screen.findByText('แก้ไขสินค้า')).toBeInTheDocument();
-    expect(screen.getByLabelText('ชื่อสินค้า', { selector: '#edit-product-name' })).toHaveValue(
-      'Jasmine Rice 5kg',
-    );
+    expect(screen.getByLabelText('แก้ไขชื่อสินค้า')).toHaveValue('Jasmine Rice 5kg');
   });
 });
 
@@ -228,14 +226,14 @@ describe('ProductEditForm', () => {
 
     renderEditForm();
     // The form is prefilled with the product's current values.
-    expect(screen.getByLabelText('ชื่อสินค้า')).toHaveValue('Jasmine Rice 5kg');
-    expect(screen.getByLabelText('ราคาขาย (บาท)')).toHaveValue(125);
+    expect(screen.getByLabelText('แก้ไขชื่อสินค้า')).toHaveValue('Jasmine Rice 5kg');
+    expect(screen.getByLabelText('แก้ไขราคาขาย (บาท)')).toHaveValue(125);
 
-    fireEvent.change(screen.getByLabelText('ชื่อสินค้า'), {
+    fireEvent.change(screen.getByLabelText('แก้ไขชื่อสินค้า'), {
       target: { value: 'Jasmine Rice 10kg' },
     });
-    fireEvent.change(screen.getByLabelText('ราคาขาย (บาท)'), { target: { value: '240.00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+    fireEvent.change(screen.getByLabelText('แก้ไขราคาขาย (บาท)'), { target: { value: '240.00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกการแก้ไข' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('บันทึกสินค้าเรียบร้อยแล้ว');
 
@@ -256,7 +254,7 @@ describe('ProductEditForm', () => {
     );
 
     renderEditForm();
-    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกการแก้ไข' }));
 
     expect(await screen.findByRole('button', { name: 'กำลังบันทึก…' })).toBeDisabled();
   });
@@ -270,7 +268,7 @@ describe('ProductEditForm', () => {
     });
 
     renderEditForm();
-    fireEvent.click(screen.getByRole('button', { name: 'บันทึก' }));
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกการแก้ไข' }));
 
     const alert = await screen.findByRole('alert', {}, { timeout: 3000 });
     expect(alert).toHaveTextContent('ไม่สามารถบันทึกสินค้าได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่');
